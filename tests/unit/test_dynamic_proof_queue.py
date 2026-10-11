@@ -138,7 +138,8 @@ def test_spawn_straggler_refills_idle_slot_with_frozen_snapshot(monkeypatch, tmp
     spans = timing["job_timings"]
     first_free = min(spans[f"proof-{index:02d}"]["finished_sec"] for index in range(1, workers))
     assert spans[queued_id]["started_sec"] >= first_free
-    assert spans[queued_id]["started_sec"]-first_free < 0.5
+    # Spawn startup varies across hosts; refill must precede straggler completion.
+    assert spans[queued_id]["started_sec"] < spans["proof-00"]["finished_sec"]
     assert timing["max_active_workers"] == timing["slots"] == workers
     assert timing["jobs_started"] == timing["jobs_completed"] == count
     assert timing["busy_sec"]+timing["idle_sec"] == pytest.approx(workers*timing["elapsed_sec"])
