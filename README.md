@@ -15,7 +15,7 @@ This public snapshot contains **341 Lean-certified proof artifacts from checkpoi
 | Explore conjectures and counterexamples | [Local exploration](#explore-locally) | No |
 | Add optional model generation and proof attempts | [Model-assisted research](#optional-model-assisted-research) | Your own account |
 
-The proof archive preserves exact independently replayable sources. It is not yet a single namespaced Lean library that can be imported as a whole; the [reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) explains the current workflow.
+The [Lean library](certified_lean/MathFoundry.lean) exposes all 341 archived targets in separate namespaces. Use `import MathFoundry` for the complete collection or `import MathFoundry.Foundations` for eight useful starting results. The [reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) shows how to add it to your own Lake project; Python and a model account are unnecessary for library use.
 
 ## Start without AI
 

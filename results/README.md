@@ -2,7 +2,7 @@
 
 **341 independently replayable Lean artifacts, frozen at checkpoint 275.** The collection includes known theorems, routine consequences and helpers. No original mathematical result is established.
 
-Start with [using one proof](../docs/using-proofs.md) or the [small adjacency-code example](../docs/adjacency-code-example.md). Every proof source includes its required checked parents; the archive is not yet a single importable Lean library.
+Start with [using one proof](../docs/using-proofs.md) or the [small adjacency-code example](../docs/adjacency-code-example.md). Every archived proof includes its required checked parents. The [importable Lean library](../certified_lean/MathFoundry.lean) puts those contexts in separate namespaces so all 341 targets can coexist.
 
 ## Browse by subject
 

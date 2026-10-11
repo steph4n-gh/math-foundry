@@ -45,32 +45,76 @@ Each report records the selected IDs, exact hashes, compiler identity, durations
 
 ## Reuse in your own Lean project
 
-Archived sources are standalone compilation units. Each embeds its checked prerequisites, so importing all 341 files together can redeclare shared names. The current `certified_lean` package pins dependencies but does not expose a combined `lean_lib` target.
+The `certifiedResearch` Lake package in `certified_lean` exports the `MathFoundry` library. It uses Lean **4.34.1** and the same pinned Mathlib revision as the archive. Create a separate project with these three files; no Python installation or model account is needed.
 
-For one theorem, retain the complete source and add your consumer theorem in a separate namespace. [ReuseCliqueBound.lean](../examples/ReuseCliqueBound.lean) contains the unchanged clique-bound source followed by this small use:
+`lean-toolchain`:
+
+```text
+leanprover/lean4:v4.34.1
+```
+
+`lakefile.lean`:
 
 ```lean
-namespace MathFoundryExamples
+import Lake
+open Lake DSL
+
+package myResearch
+
+require certifiedResearch from git
+  "https://github.com/steph4n-gh/math-foundry.git" @ "main" / "certified_lean"
+
+@[default_target]
+lean_lib MyResearch
+```
+
+`MyResearch.lean`:
+
+```lean
+import MathFoundry.Foundations
+
+namespace MyResearch
 
 theorem clique_bound {V : Type*} [Fintype V] [DecidableEq V]
     (G : SimpleGraph V) [DecidableRel G.Adj] :
     (G.cliqueNum : ℝ) ≤ (G.chromaticNumber.toNat : ℝ) := by
-  exact archetype_chi_ge_omega G
+  exact MathFoundry.archetype_chi_ge_omega G
 
-end MathFoundryExamples
+end MyResearch
+
+#print axioms MyResearch.clique_bound
 ```
 
-Compile the example using the prepared workspace:
+With [Elan](https://github.com/leanprover/elan#installation) installed, run from your new project:
 
 ```sh
-cd certified_lean
-lake env lean ../examples/ReuseCliqueBound.lean
+lake update
+lake exe cache get
+lake build
+lake env lean MyResearch.lean
 ```
 
-The file ends with `#print axioms MathFoundryExamples.clique_bound`. This example only reuses the existing bound; it adds no mathematical result to the snapshot count.
+The final command prints the consumer theorem's transitive axioms. The permitted set is `propext`, `Classical.choice` and `Quot.sound`. Dependency setup downloads upstream sources and Mathlib caches. `lake update` records the exact resolved Git revisions in your `lake-manifest.json`; commit that lockfile and replace `"main"` with the resolved Math Foundry commit for a fixed dependency. Keep the pinned Lean version when using this snapshot. Git dependencies with a package subdirectory follow the [official Lake syntax](https://lean-lang.org/doc/reference/latest/Build-Tools-and-Distribution/Lake/).
 
-When combining results in a larger project, reconcile duplicate prerequisites and put declarations in appropriate namespaces. Keep the archived proof bytes and provenance unchanged, then independently compile and inspect the axioms of your adapted module. A compact namespaced library with an external import example is a useful next contribution; the present archive does not promise that packaging yet.
+The eight foundation exports retain their existing theorem names: `MathFoundry.archetype_chi_ge_omega`, `MathFoundry.archetype_brooks_standard`, `MathFoundry.archetype_spectral_wilf`, `MathFoundry.mcclelland_graph_energy_upper`, `MathFoundry.cvetkovic_signless_laplacian_max_deg`, `MathFoundry.chung_normalized_laplacian_gap_upper`, `MathFoundry.parity_code_unique_neighbor_distance` and `MathFoundry.parity_code_dimension_le_order`. Their [explanations and premises](../results/README.md#useful-starting-points) still apply; the historical Brooks identifier denotes the standard greedy bound.
+
+For all 341 targets, change the first line to `import MathFoundry`. Each is available as `MathFoundry.Archive.<theorem_name>.<theorem_name>`, with its checked prerequisites isolated in that same namespace. Raw catalog IDs containing punctuation use the catalog's sanitized `theorem_name`. To import only one artifact, use its module `MathFoundry.Archive.<theorem_name>`.
+
+The [library manifest](../certified_lean/MathFoundry/manifest.json) maps every original ID to its module, qualified theorem, original source/challenge hashes and generated-module hash. It is a packaging record; it does not grant originality or replace fresh kernel verification. Complete statements and guards remain in the [result catalog](../results/catalog.json).
+
+[ImportFoundry.lean](../examples/ImportFoundry.lean) is a separate consumer example used by CI. CI clones the checked commit as an actual Lake dependency, builds the complete library, compiles this consumer and audits all 341 target axioms, all eight exported names and the consumer theorem. This adds no new research result to the snapshot count.
+
+## Maintain the packaging
+
+Archived proof and challenge bytes stay unchanged. Generated modules retain the exact import prefix and complete theorem body, adding only an enclosing namespace and provenance comment. After intentionally updating the archive, regenerate and check the package:
+
+```sh
+python scripts/package_lean_library.py
+python scripts/package_lean_library.py --check
+```
+
+The check validates the whole catalog's exact source/challenge/AST/guard bindings and every generated file. It invokes neither Lean nor AI. Fresh compilation and axiom checks are separate gates. The original [standalone reuse example](../examples/ReuseCliqueBound.lean) remains available for examining one archived proof without the library.
 
 ## Contribute a useful improvement
 
-Good small contributions include a clearer theorem explanation, a reproducible counterexample, a namespaced module for a few checked results, or an exact comparison with a readable primary theorem. Provide complete premises and keep failed checks visible. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+Good small contributions include a clearer theorem explanation, a reproducible counterexample, a useful consumer example, or an exact comparison with a readable primary theorem. Provide complete premises and keep failed checks visible. See [CONTRIBUTING.md](../CONTRIBUTING.md).
