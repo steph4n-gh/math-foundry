@@ -1,0 +1,9 @@
+Math Foundry
+Copyright 2026 Math Foundry contributors.
+
+Original project code, documentation and newly authored proof scripts are
+licensed under the Apache License, Version 2.0.
+
+Lean, Mathlib and other upstream components retain their own copyrights and
+licenses. Attribution and external dependency references are recorded in
+THIRD_PARTY_NOTICES.md. Mathematical citations do not imply endorsement.

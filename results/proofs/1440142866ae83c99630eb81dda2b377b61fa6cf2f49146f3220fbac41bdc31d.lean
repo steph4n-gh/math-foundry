@@ -1,0 +1,150 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem model_ab71923bd68f658bd3e6 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((Fintype.card V : ℝ) ≥ (19999999 / 10000000 : ℝ)))) :
+    ((∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v)) - (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|)) ≥ ((∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v)) - (((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) - (if Fintype.card V = 0 then (0 : ℝ) else sInf (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues))) + (Real.sqrt (max (0 : ℝ) (((Fintype.card V : ℝ) - (2 : ℝ)) * ((((2 : ℝ) * (G.edgeFinset.card : ℝ)) - ((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) ^ 2)) - ((((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) - (if Fintype.card V = 0 then (0 : ℝ) else sInf (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues))) - (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues))) ^ 2))))))) := by
+  classical
+  have hnpos : (0 : ℝ) < (Fintype.card V : ℝ) := by
+    linarith only [h_guard.2]
+  have hn0 : Fintype.card V ≠ 0 := by
+    exact_mod_cast hnpos.ne'
+  letI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hn0)
+  let f : V → ℝ := (G.isHermitian_adjMatrix ℝ).eigenvalues
+  have hsum : (∑ v : V, f v) = 0 := by
+    simpa [f] using (G.isHermitian_adjMatrix ℝ).trace_eq_sum_eigenvalues.symm
+  let A : Matrix V V ℝ := G.adjMatrix ℝ
+  let hA : A.IsHermitian := G.isHermitian_adjMatrix ℝ
+  let U : Matrix.unitaryGroup V ℝ := hA.eigenvectorUnitary
+  let φ := Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U
+  have hspec : A = φ (Matrix.diagonal f) := by
+    simpa only [RCLike.ofReal_real_eq_id, Function.id_comp] using hA.spectral_theorem
+  have htr (B : Matrix V V ℝ) : Matrix.trace (φ B) = Matrix.trace B := by
+    change Matrix.trace ((U : Matrix V V ℝ) * B *
+      (star U : Matrix V V ℝ)) = Matrix.trace B
+    rw [Matrix.trace_mul_cycle, Unitary.coe_star_mul_self, Matrix.one_mul]
+  have hsquare : (∑ v : V, f v ^ 2) = 2 * (G.edgeFinset.card : ℝ) := by
+    calc
+      _ = Matrix.trace (A ^ 2) := by
+        rw [hspec, ← map_pow, Matrix.diagonal_pow, htr, Matrix.trace_diagonal]
+        simp only [Pi.pow_apply]
+      _ = ∑ v : V, (G.degree v : ℝ) := by
+        simp only [A, pow_two, Matrix.trace, Matrix.diag_apply,
+          SimpleGraph.adjMatrix_mul_self_apply_self]
+      _ = 2 * (G.edgeFinset.card : ℝ) := by
+        exact_mod_cast G.sum_degrees_eq_twice_card_edges
+  obtain ⟨a, ha⟩ := (Set.range_nonempty f).csSup_mem (Set.finite_range f)
+  obtain ⟨b, hb⟩ := (Set.range_nonempty f).csInf_mem (Set.finite_range f)
+  have hle (w : V) : f w ≤ f a := by
+    rw [ha]
+    exact le_csSup (Set.finite_range f).bddAbove ⟨w, rfl⟩
+  have hge (w : V) : f b ≤ f w := by
+    rw [hb]
+    exact csInf_le (Set.finite_range f).bddBelow ⟨w, rfl⟩
+  have ha0 : 0 ≤ f a := by
+    have hh : (∑ w : V, f w) ≤ ∑ _w : V, f a :=
+      Finset.sum_le_sum (fun w _ => hle w)
+    simp only [hsum, Finset.sum_const, Finset.card_univ, nsmul_eq_mul] at hh
+    nlinarith only [hh, hnpos]
+  have hb0 : f b ≤ 0 := by
+    have hh : (∑ _w : V, f b) ≤ ∑ w : V, f w :=
+      Finset.sum_le_sum (fun w _ => hge w)
+    simp only [hsum, Finset.sum_const, Finset.card_univ, nsmul_eq_mul] at hh
+    nlinarith only [hh, hnpos]
+  have henergy : (∑ w : V, |f w|) ≤ f a - f b +
+      Real.sqrt (max (0 : ℝ) (((Fintype.card V : ℝ) - 2) *
+        (2 * (G.edgeFinset.card : ℝ) - f a ^ 2 - f b ^ 2))) := by
+    by_cases hab : a = b
+    · have hfa0 : f a = 0 := by
+        have hh : f a ≤ 0 := by
+          rw [hab]
+          exact hb0
+        exact le_antisymm hh ha0
+      have hzero (w : V) : f w = 0 := by
+        have hlo := hge w
+        have hhi := hle w
+        rw [← hab, hfa0] at hlo
+        rw [hfa0] at hhi
+        exact le_antisymm hhi hlo
+      have hE0 : (∑ w : V, |f w|) = 0 := by
+        simp only [hzero, abs_zero, Finset.sum_const_zero]
+      rw [hE0, hab, sub_self, zero_add]
+      exact Real.sqrt_nonneg _
+    · let s : Finset V := ((Finset.univ : Finset V).erase a).erase b
+      have hbmem : b ∈ (Finset.univ : Finset V).erase a :=
+        Finset.mem_erase.mpr ⟨(fun hba => hab hba.symm), Finset.mem_univ b⟩
+      have hcard : (s.card : ℝ) = (Fintype.card V : ℝ) - 2 := by
+        have hc1 : ((Finset.univ : Finset V).erase a).card + 1 = Fintype.card V := by
+          simpa only [Finset.card_univ] using
+            (Finset.card_erase_add_one (Finset.mem_univ a))
+        have hc2 : s.card + 1 = ((Finset.univ : Finset V).erase a).card :=
+          Finset.card_erase_add_one hbmem
+        have hc1' : (((Finset.univ : Finset V).erase a).card : ℝ) + 1 =
+            (Fintype.card V : ℝ) := by
+          exact_mod_cast hc1
+        have hc2' : (s.card : ℝ) + 1 =
+            (((Finset.univ : Finset V).erase a).card : ℝ) := by
+          exact_mod_cast hc2
+        linarith only [hc1', hc2']
+      have hsplit (g : V → ℝ) : (∑ w : V, g w) =
+          g a + g b + ∑ w ∈ s, g w := by
+        have h1 := Finset.add_sum_erase (Finset.univ : Finset V) g
+          (Finset.mem_univ a)
+        have h2 : g b + (∑ w ∈ s, g w) =
+            ∑ w ∈ (Finset.univ : Finset V).erase a, g w :=
+          Finset.add_sum_erase _ g hbmem
+        linarith only [h1, h2]
+      have hsquare_s : (∑ w ∈ s, f w ^ 2) =
+          2 * (G.edgeFinset.card : ℝ) - f a ^ 2 - f b ^ 2 := by
+        have hh := hsplit (fun w => f w ^ 2)
+        rw [hsquare] at hh
+        linarith only [hh]
+      have habs : (∑ w : V, |f w|) =
+          f a - f b + ∑ w ∈ s, |f w| := by
+        have hh := hsplit (fun w => |f w|)
+        rw [abs_of_nonneg ha0, abs_of_nonpos hb0] at hh
+        linarith only [hh]
+      have hc := Finset.sum_mul_sq_le_sq_mul_sq s
+        (fun _ => (1 : ℝ)) (fun w => |f w|)
+      have hc' : (∑ w ∈ s, |f w|) ^ 2 ≤
+          ((Fintype.card V : ℝ) - 2) *
+            (2 * (G.edgeFinset.card : ℝ) - f a ^ 2 - f b ^ 2) := by
+        simpa only [one_mul, one_pow, Finset.sum_const, nsmul_eq_mul,
+          mul_one, sq_abs, hcard, hsquare_s] using hc
+      have hrem : (∑ w ∈ s, |f w|) ≤
+          Real.sqrt (max (0 : ℝ) (((Fintype.card V : ℝ) - 2) *
+            (2 * (G.edgeFinset.card : ℝ) - f a ^ 2 - f b ^ 2))) :=
+        Real.le_sqrt_of_sq_le (hc'.trans (le_max_right _ _))
+      rw [habs]
+      linarith only [hrem]
+  simp only [if_neg hn0]
+  change (∑ v : V, Real.exp (f v)) - (∑ v : V, |f v|) ≥
+    (∑ v : V, Real.exp (f v)) -
+      ((sSup (Set.range f) - sInf (Set.range f)) +
+        Real.sqrt (max (0 : ℝ) (((Fintype.card V : ℝ) - 2) *
+          (2 * (G.edgeFinset.card : ℝ) - (sSup (Set.range f)) ^ 2 -
+            ((sSup (Set.range f) - sInf (Set.range f)) -
+              sSup (Set.range f)) ^ 2))))
+  rw [← ha, ← hb]
+  have hrad : ((f a - f b) - f a) ^ 2 = f b ^ 2 := by ring
+  rw [hrad]
+  linarith only [henergy]

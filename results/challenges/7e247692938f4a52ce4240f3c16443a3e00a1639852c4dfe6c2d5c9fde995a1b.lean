@@ -1,0 +1,115 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Tactic
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem estrada_ge_energy {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v)) ≥ (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) := by
+  classical
+  have hsum : (∑ v : V, (G.isHermitian_adjMatrix ℝ).eigenvalues v) = 0 := by
+    simpa using (G.isHermitian_adjMatrix ℝ).trace_eq_sum_eigenvalues.symm
+  have hpoint (x : ℝ) : |x| + x ≤ Real.exp x := by
+    by_cases hx : 0 ≤ x
+    · rw [abs_of_nonneg hx]
+      have hexp := Real.quadratic_le_exp_of_nonneg hx
+      nlinarith [sq_nonneg (x - 1)]
+    · rw [abs_of_neg (lt_of_not_ge hx)]
+      linarith [Real.exp_pos x]
+  have hbound :
+      (∑ v : V, (|(G.isHermitian_adjMatrix ℝ).eigenvalues v| +
+        (G.isHermitian_adjMatrix ℝ).eigenvalues v)) ≤
+      ∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v) := by
+    exact Finset.sum_le_sum (fun v _ => hpoint _)
+  simpa only [Finset.sum_add_distrib, hsum, add_zero] using hbound
+
+theorem estrada_index_quadratic_lower_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v)) ≥ ((Fintype.card V : ℝ) + (((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) ^ 2) / (2 : ℝ))) := by
+  classical
+  let f : V → ℝ := (G.isHermitian_adjMatrix ℝ).eigenvalues
+  have hsum : (∑ v : V, f v) = 0 := by
+    simpa [f] using (G.isHermitian_adjMatrix ℝ).trace_eq_sum_eigenvalues.symm
+  by_cases hV : Fintype.card V = 0
+  · haveI : IsEmpty V := Fintype.card_eq_zero_iff.mp hV
+    simp [hV]
+  · haveI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hV)
+    obtain ⟨v, hv⟩ := (Set.range_nonempty f).csSup_mem (Set.finite_range f)
+    have hle (w : V) : f w ≤ f v := by
+      rw [hv]
+      exact le_csSup (Set.finite_range f).bddAbove (Set.mem_range_self w)
+    have hnonneg : 0 ≤ f v := by
+      by_contra hneg
+      have hlt : (∑ w : V, f w) < 0 :=
+        Finset.sum_neg
+          (fun w _ => lt_of_le_of_lt (hle w) (lt_of_not_ge hneg))
+          Finset.univ_nonempty
+      linarith
+    have hres (w : V) : 0 ≤ Real.exp (f w) - (f w + 1) :=
+      sub_nonneg.mpr (Real.add_one_le_exp (f w))
+    have hsingle : Real.exp (f v) - (f v + 1) ≤
+        ∑ w : V, (Real.exp (f w) - (f w + 1)) :=
+      Finset.single_le_sum (fun w _ => hres w) (Finset.mem_univ v)
+    simp only [Finset.sum_sub_distrib, Finset.sum_add_distrib, hsum,
+      Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one, zero_add] at hsingle
+    change (Fintype.card V : ℝ) +
+      (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range f)) ^ 2 / 2 ≤
+        ∑ w : V, Real.exp (f w)
+    rw [if_neg hV, ← hv]
+    linarith [Real.quadratic_le_exp_of_nonneg hnonneg]
+
+theorem model_081bc55d24f66b98c45d {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ^ 2) ≤ ((2 : ℝ) * ((Fintype.card V : ℝ) * (G.edgeFinset.card : ℝ))) := by
+  classical
+    let hA := G.isHermitian_adjMatrix ℝ
+    let D : Matrix V V ℝ := Matrix.diagonal hA.eigenvalues
+    let U := hA.eigenvectorUnitary
+    have hspec : G.adjMatrix ℝ =
+        Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U D := by
+      simpa [D, U] using hA.spectral_theorem
+    have htrace : Matrix.trace (G.adjMatrix ℝ * G.adjMatrix ℝ) =
+        ∑ v : V, hA.eigenvalues v ^ 2 := by
+      calc
+        Matrix.trace (G.adjMatrix ℝ * G.adjMatrix ℝ) =
+            Matrix.trace (Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U (D * D)) := by
+          rw [map_mul, ← hspec]
+        _ = Matrix.trace (D * D) := by
+          rw [Unitary.conjStarAlgAut_apply, Matrix.trace_mul_cycle,
+            Unitary.coe_star_mul_self, one_mul]
+        _ = ∑ v : V, hA.eigenvalues v ^ 2 := by
+          simp [D, Matrix.diagonal_mul_diagonal, pow_two]
+    have hsquares : (∑ v : V, hA.eigenvalues v ^ 2) =
+        (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+      rw [← htrace]
+      calc
+        Matrix.trace (G.adjMatrix ℝ * G.adjMatrix ℝ) =
+            ∑ v : V, (G.degree v : ℝ) := by
+          simp only [Matrix.trace, Matrix.diag_apply,
+            G.adjMatrix_mul_self_apply_self]
+        _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+          exact_mod_cast G.sum_degrees_eq_twice_card_edges
+    have hCS : (∑ v : V, |hA.eigenvalues v|) ^ 2 ≤
+        (Fintype.card V : ℝ) * ∑ v : V, hA.eigenvalues v ^ 2 := by
+      simpa only [one_mul, one_pow, Finset.sum_const, Finset.card_univ,
+        nsmul_eq_mul, mul_one, sq_abs] using
+        (Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
+          (fun _ : V => (1 : ℝ)) (fun v => |hA.eigenvalues v|))
+    rw [hsquares] at hCS
+    calc
+      _ ≤ (Fintype.card V : ℝ) * ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := hCS
+      _ = _ := by ring
+theorem graph_energy_spectral_radius_lower {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≥ ((2 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues))) := by
+  sorry

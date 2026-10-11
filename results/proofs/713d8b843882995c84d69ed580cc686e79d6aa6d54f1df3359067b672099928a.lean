@@ -1,0 +1,480 @@
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem hull3d_parity_code_distance_le_0_1_unique_neighbor_radius_order_1_709dc59dd02e {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ)) ≤ ((Fintype.card V : ℝ) + (1 : ℝ)) := by
+  classical
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm
+  have hw : weights.Nonempty := by simp [weights]
+  change (weights.min' hw : ℝ) ≤ (Fintype.card V : ℝ) + 1
+  have h : weights.min' hw ≤ Fintype.card V + 1 :=
+    Finset.min'_le _ _ (by simp [weights])
+  exact_mod_cast h
+
+theorem model_6c69a9fac94e8d24072f {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Colorable 2) ∧ ((∃ d : ℕ, G.IsRegularOfDegree d)) ∧ ((G.minDegree : ℝ) ≥ (19999999 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)))) :
+    (((2 : ℝ) * (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (Finset V)).filter (fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w))).image Finset.card; ((weights.min' (by simp [weights]) - 1 : ℕ) : ℝ))) + (max (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) (((2 : ℝ) * (G.minDegree : ℝ)) - (2 : ℝ)))) ≤ (Fintype.card V : ℝ) := by
+  let d := G.minDegree
+  have hd : 2 ≤ d := by
+    by_contra h
+    have hn : G.minDegree ≤ 1 := by
+      change d ≤ 1
+      omega
+    have hr : (G.minDegree : ℝ) ≤ 1 := by exact_mod_cast hn
+    linarith [h_guard.2.2.1]
+  haveI : Nonempty V := by
+    rcases isEmpty_or_nonempty V with h | h
+    · letI : IsEmpty V := h
+      have hz : d = 0 := by
+        change G.minDegree = 0
+        simp
+      omega
+    · exact h
+  obtain ⟨C⟩ := h_guard.1
+  have htwo : ∀ c : Fin 2, c = 0 ∨ c = 1 := by
+    intro c
+    fin_cases c <;> simp
+  have hcolor : ∀ a b c : Fin 2, a ≠ b → a ≠ c → b = c := by
+    intro a b c hab hac
+    have hab' : a.val ≠ b.val := fun h => hab (Fin.ext h)
+    have hac' : a.val ≠ c.val := fun h => hac (Fin.ext h)
+    have ha := a.isLt
+    have hb := b.isLt
+    have hc := c.isLt
+    apply Fin.ext
+    omega
+  have hsame : ∀ {v w u : V}, G.Adj v w → G.Adj v u → C w = C u := by
+    intro v w u hvw hvu
+    exact hcolor _ _ _ (C.valid hvw) (C.valid hvu)
+  let Stop : Finset V → Prop := fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w)
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (Finset V)).filter Stop).image Finset.card
+  have hW : weights.Nonempty := by simp [weights]
+  let s := weights.min' hW
+  let k := s - 1
+  have hs : 1 ≤ s := by
+    change 1 ≤ weights.min' hW
+    refine Finset.le_min' weights hW 1 ?_
+    intro a ha
+    rcases Finset.mem_union.mp ha with ha | ha
+    · have he : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha
+      omega
+    · obtain ⟨S, hS, rfl⟩ := Finset.mem_image.mp ha
+      have hStop : Stop S := (Finset.mem_filter.mp hS).2
+      exact Finset.card_pos.mpr hStop.1
+  have hk : k + 1 = s := by
+    change s - 1 + 1 = s
+    omega
+  have hstop : ∀ S : Finset V, Stop S → s ≤ S.card := by
+    intro S hS
+    change weights.min' hW ≤ S.card
+    apply Finset.min'_le
+    exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨S, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hS⟩, rfl⟩)
+  have hsmall : ∀ S : Finset V, S.Nonempty → S.card ≤ k → ∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w := by
+    intro S hne hcard
+    by_contra h
+    have hh := hstop S ⟨hne, h⟩
+    omega
+  let A : Fin 2 → Finset V := fun c => Finset.univ.filter (fun v => C v = c)
+  have hmem : ∀ (c : Fin 2) (v : V), v ∈ A c ↔ C v = c := by
+    intro c v
+    simp [A]
+  have hdisj : Disjoint (A 0) (A 1) := by
+    refine Finset.disjoint_left.mpr ?_
+    intro v h0 h1
+    have he : (0 : Fin 2) = 1 := ((hmem 0 v).mp h0).symm.trans ((hmem 1 v).mp h1)
+    exact (by decide : (0 : Fin 2) ≠ 1) he
+  have hcover : A 0 ∪ A 1 = Finset.univ := by
+    ext v
+    simp only [Finset.mem_union, hmem, Finset.mem_univ, iff_true]
+    exact htwo (C v)
+  have hpart : (A 0).card + (A 1).card = Fintype.card V := by
+    calc
+      (A 0).card + (A 1).card = (A 0 ∪ A 1).card := (Finset.card_union_of_disjoint hdisj).symm
+      _ = Fintype.card V := by rw [hcover, Finset.card_univ]
+  have hbig : ∀ c : Fin 2, d ≤ (A c).card := by
+    intro c
+    obtain ⟨v⟩ := ‹Nonempty V›
+    have hv : 0 < G.degree v := by
+      have hh := G.minDegree_le_degree v
+      change d ≤ G.degree v at hh
+      omega
+    obtain ⟨w, hw⟩ := (G.degree_pos_iff_exists_adj v).mp hv
+    have hex : ∃ z : V, C z ≠ c := by
+      by_cases hc : C v = c
+      · refine ⟨w, ?_⟩
+        intro h
+        exact C.valid hw (hc.trans h.symm)
+      · exact ⟨v, hc⟩
+    obtain ⟨z, hz⟩ := hex
+    calc
+      d ≤ G.degree z := G.minDegree_le_degree z
+      _ = (G.neighborFinset z).card := (G.card_neighborFinset_eq_degree z).symm
+      _ ≤ (A c).card := Finset.card_le_card (by
+        intro u hu
+        exact (hmem c u).mpr (hcolor _ _ _ (C.valid ((G.mem_neighborFinset z u).mp hu)) hz))
+  have hbound : ∀ c : Fin 2, k + (d - 1) ≤ (A c).card := by
+    intro c
+    obtain ⟨D, hD, hDc⟩ := Finset.exists_subset_card_eq (show d - 2 ≤ (A c).card by
+      have hh := hbig c
+      omega)
+    let S : Finset V := A c \ D
+    have hSc : S.card = (A c).card - (d - 2) := by
+      change (A c \ D).card = (A c).card - (d - 2)
+      rw [Finset.card_sdiff_of_subset hD, hDc]
+    have hSne : S.Nonempty := Finset.card_pos.mp (by
+      have hh := hbig c
+      omega)
+    have hStop : Stop S := by
+      refine ⟨hSne, ?_⟩
+      rintro ⟨v, w, hw, hvw, huniq⟩
+      have hwc : C w = c := (hmem c w).mp (Finset.mem_sdiff.mp hw).1
+      have hsub : G.neighborFinset v ⊆ insert w D := by
+        intro u hu
+        have hvu := (G.mem_neighborFinset v u).mp hu
+        have huc : C u = c := (hsame hvw hvu).symm.trans hwc
+        by_cases huD : u ∈ D
+        · exact Finset.mem_insert_of_mem huD
+        · have huS : u ∈ S := Finset.mem_sdiff.mpr ⟨(hmem c u).mpr huc, huD⟩
+          have hue : u = w := huniq u huS hvu
+          simp [hue]
+      have hcard : G.degree v ≤ D.card + 1 := by
+        rw [← G.card_neighborFinset_eq_degree v]
+        exact (Finset.card_le_card hsub).trans (Finset.card_insert_le _ _)
+      have hh := G.minDegree_le_degree v
+      change d ≤ G.degree v at hh
+      omega
+    have hle := hstop S hStop
+    have hh := hbig c
+    omega
+  have hdegreeNat : 2 * k + 2 * (d - 1) ≤ Fintype.card V := by
+    have h0 := hbound 0
+    have h1 := hbound 1
+    omega
+  have hdegree : (2 : ℝ) * (k : ℝ) + (2 * (d : ℝ) - 2) ≤ (Fintype.card V : ℝ) := by
+    have hr : (2 : ℝ) * (k : ℝ) + 2 * ((d - 1 : ℕ) : ℝ) ≤ (Fintype.card V : ℝ) := by
+      exact_mod_cast hdegreeNat
+    rw [Nat.cast_sub (by omega : 1 ≤ d)] at hr
+    norm_num at hr
+    linarith
+  obtain ⟨T0, hT0, hT0c⟩ := Finset.exists_subset_card_eq (show k ≤ (A 0).card by
+    have hh := hbound 0
+    omega)
+  obtain ⟨T1, hT1, hT1c⟩ := Finset.exists_subset_card_eq (show k ≤ (A 1).card by
+    have hh := hbound 1
+    omega)
+  let T := T0 ∪ T1
+  have hTdisj : Disjoint T0 T1 := by
+    refine Finset.disjoint_left.mpr ?_
+    intro v hv0 hv1
+    exact (Finset.disjoint_left.mp hdisj) (hT0 hv0) (hT1 hv1)
+  have hTc : T.card = 2 * k := by
+    change (T0 ∪ T1).card = 2 * k
+    rw [Finset.card_union_of_disjoint hTdisj, hT0c, hT1c]
+    omega
+  have hTcolor0 : ∀ v : V, v ∈ T0 → C v = 0 := fun v hv => (hmem 0 v).mp (hT0 hv)
+  have hTcolor1 : ∀ v : V, v ∈ T1 → C v = 1 := fun v hv => (hmem 1 v).mp (hT1 hv)
+  have hcap : ∀ c : Fin 2, (T.filter (fun v => C v = c)).card ≤ k := by
+    intro c
+    rcases htwo c with rfl | rfl
+    · have hsub : T.filter (fun v => C v = 0) ⊆ T0 := by
+        intro v hv
+        obtain ⟨hvT, hc⟩ := Finset.mem_filter.mp hv
+        rcases Finset.mem_union.mp hvT with h | h
+        · exact h
+        · have he : (0 : Fin 2) = 1 := hc.symm.trans (hTcolor1 v h)
+          exact ((by decide : (0 : Fin 2) ≠ 1) he).elim
+      exact (Finset.card_le_card hsub).trans_eq hT0c
+    · have hsub : T.filter (fun v => C v = 1) ⊆ T1 := by
+        intro v hv
+        obtain ⟨hvT, hc⟩ := Finset.mem_filter.mp hv
+        rcases Finset.mem_union.mp hvT with h | h
+        · have he : (1 : Fin 2) = 0 := hc.symm.trans (hTcolor0 v h)
+          exact ((by decide : (1 : Fin 2) ≠ 0) he).elim
+        · exact h
+      exact (Finset.card_le_card hsub).trans_eq hT1c
+  let L := (G.adjMatrix (ZMod 2)).mulVecLin
+  let K := LinearMap.ker L
+  have hzero : ∀ x : K, (∀ v : V, v ∉ T → x.1 v = 0) → x.1 = 0 := by
+    intro x hx
+    by_contra hneq
+    have hex : ∃ w : V, x.1 w ≠ 0 := by
+      by_contra h
+      apply hneq
+      funext w
+      have hh : ¬ x.1 w ≠ 0 := fun hw => h ⟨w, hw⟩
+      exact not_not.mp hh
+    obtain ⟨w, hw⟩ := hex
+    let S : Finset V := Finset.univ.filter (fun u => x.1 u ≠ 0 ∧ C u = C w)
+    have hSne : S.Nonempty := ⟨w, by simp [S, hw]⟩
+    have hScard : S.card ≤ k := by
+      calc
+        S.card ≤ (T.filter (fun u => C u = C w)).card := Finset.card_le_card (by
+          intro u hu
+          have hup : x.1 u ≠ 0 ∧ C u = C w := (Finset.mem_filter.mp hu).2
+          refine Finset.mem_filter.mpr ⟨?_, hup.2⟩
+          by_contra hut
+          exact hup.1 (hx u hut))
+        _ ≤ k := hcap (C w)
+    obtain ⟨v, u, hu, hvu, huniq⟩ := hsmall S hSne hScard
+    have hxu : x.1 u ≠ 0 := (Finset.mem_filter.mp hu).2.1
+    have huc : C u = C w := (Finset.mem_filter.mp hu).2.2
+    have heval : L x.1 v = x.1 u := by
+      change (∑ t : V, G.adjMatrix (ZMod 2) v t * x.1 t) = x.1 u
+      rw [Finset.sum_eq_single u]
+      · simp [hvu]
+      · intro t ht htu
+        by_cases hvt : G.Adj v t
+        · have hxt : x.1 t = 0 := by
+            by_contra hh
+            have htc : C t = C w := (hsame hvu hvt).symm.trans huc
+            have htS : t ∈ S := Finset.mem_filter.mpr ⟨Finset.mem_univ t, hh, htc⟩
+            exact htu (huniq t htS hvt)
+          simp [hxt]
+        · simp [hvt]
+      · intro h
+        exact (h (Finset.mem_univ u)).elim
+    have hz : L x.1 = 0 := LinearMap.mem_ker.mp x.2
+    exact hxu (heval.symm.trans (congrFun hz v))
+  let P : K →ₗ[ZMod 2] ({v : V // v ∉ T} → ZMod 2) :=
+    { toFun := fun x v => x.1 v.1
+      map_add' := fun _ _ => rfl
+      map_smul' := fun _ _ => rfl }
+  have hP : Function.Injective P := by
+    intro x y hxy
+    apply Subtype.ext
+    have hz : (x - y).1 = 0 := hzero (x - y) (by
+      intro v hv
+      have he := congrFun hxy ⟨v, hv⟩
+      change x.1 v = y.1 v at he
+      change x.1 v - y.1 v = 0
+      exact sub_eq_zero.mpr he)
+    change x.1 - y.1 = 0 at hz
+    exact sub_eq_zero.mp hz
+  have hdim : Module.finrank (ZMod 2) K ≤ Fintype.card V - 2 * k := by
+    calc
+      _ ≤ Module.finrank (ZMod 2) ({v : V // v ∉ T} → ZMod 2) := LinearMap.finrank_le_finrank_of_injective hP
+      _ = Fintype.card {v : V // v ∉ T} := Module.finrank_fintype_fun_eq_card (ZMod 2)
+      _ = Fintype.card V - 2 * k := by
+        rw [Fintype.card_subtype_compl, Fintype.card_coe, hTc]
+  have hkn : 2 * k ≤ Fintype.card V := by
+    rw [← hTc]
+    exact Finset.card_le_univ T
+  have hnullNat : 2 * k + Module.finrank (ZMod 2) K ≤ Fintype.card V := by omega
+  have hnull : (2 : ℝ) * (k : ℝ) + (Module.finrank (ZMod 2) K : ℝ) ≤ (Fintype.card V : ℝ) := by
+    exact_mod_cast hnullNat
+  change (2 : ℝ) * (k : ℝ) + max (Module.finrank (ZMod 2) K : ℝ) (2 * (d : ℝ) - 2) ≤ (Fintype.card V : ℝ)
+  rcases le_total (Module.finrank (ZMod 2) K : ℝ) (2 * (d : ℝ) - 2) with h | h
+  · rw [max_eq_right h]
+    exact hdegree
+  · rw [max_eq_left h]
+    exact hnull
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+theorem model_1b0dcaf9ab0652a505ad {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Colorable 2) ∧ ((∃ d : ℕ, G.IsRegularOfDegree d)) ∧ ((G.minDegree : ℝ) ≥ (19999999 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)))) :
+    ((G.minDegree : ℝ) * (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ))) ≤ ((Fintype.card V : ℝ) * ((Int.floor ((G.minDegree : ℝ) / (2 : ℝ))) : ℝ)) := by
+  classical
+  let L := (G.adjMatrix (ZMod 2)).mulVecLin
+  let K := LinearMap.ker L
+  have hkpos : 0 < Module.finrank (ZMod 2) K := by
+    by_contra h
+    have hz : Module.finrank (ZMod 2) K = 0 := by omega
+    have hg := h_guard.2.2.2
+    change (Module.finrank (ZMod 2) K : ℝ) ≥ (9999999 / 10000000 : ℝ) at hg
+    rw [hz] at hg
+    norm_num at hg
+  obtain ⟨x, hx⟩ := (Module.finrank_pos_iff_exists_ne_zero (R := ZMod 2) (M := K)).mp hkpos
+  have hxval : x.1 ≠ 0 := by
+    intro h
+    apply hx
+    apply Subtype.ext
+    exact h
+  have hxker : L x.1 = 0 := LinearMap.mem_ker.mp x.2
+  obtain ⟨w, hw⟩ : ∃ w : V, x.1 w ≠ 0 := by
+    by_contra h
+    apply hxval
+    funext v
+    have hn : ¬ x.1 v ≠ 0 := fun hv => h ⟨v, hv⟩
+    exact not_not.mp hn
+  letI : Nonempty V := ⟨w⟩
+  obtain ⟨d, hreg⟩ := h_guard.2.1
+  have hmin : G.minDegree = d := hreg.minDegree_eq
+  have hdpos : 0 < d := by
+    by_contra h
+    have hz : d = 0 := by omega
+    have hg := h_guard.2.2.1
+    rw [hmin, hz] at hg
+    norm_num at hg
+  obtain ⟨C⟩ := h_guard.1
+  have hcolor : ∀ a b c : Fin 2, a ≠ b → a ≠ c → b = c := by
+    intro a b c hab hac
+    have hab' : a.val ≠ b.val := fun h => hab (Fin.ext h)
+    have hac' : a.val ≠ c.val := fun h => hac (Fin.ext h)
+    have ha := a.isLt
+    have hb := b.isLt
+    have hc := c.isLt
+    apply Fin.ext
+    omega
+  let c : Fin 2 := C w
+  let A : Finset V := Finset.univ.filter (fun v => C v = c)
+  let B : Finset V := Finset.univ.filter (fun v => C v ≠ c)
+  have hmemA : ∀ v : V, v ∈ A ↔ C v = c := by
+    intro v
+    simp [A]
+  have hmemB : ∀ v : V, v ∈ B ↔ C v ≠ c := by
+    intro v
+    simp [B]
+  have hdisj : Disjoint A B := by
+    refine Finset.disjoint_left.mpr ?_
+    intro v ha hb
+    exact ((hmemB v).mp hb) ((hmemA v).mp ha)
+  have hcover : A ∪ B = Finset.univ := by
+    ext v
+    simp only [Finset.mem_union, hmemA, hmemB, Finset.mem_univ, iff_true]
+    exact em (C v = c)
+  have hbi : G.IsBipartiteWith (A : Set V) (B : Set V) := by
+    refine ⟨Finset.disjoint_coe.mpr hdisj, ?_⟩
+    intro v u hvu
+    by_cases hv : C v = c
+    · refine Or.inl ⟨(hmemA v).mpr hv, (hmemB u).mpr ?_⟩
+      intro hu
+      exact C.valid hvu (hv.trans hu.symm)
+    · exact Or.inr ⟨(hmemB v).mpr hv, (hmemA u).mpr (hcolor _ _ _ (C.valid hvu) hv)⟩
+  have hbalance : A.card = B.card := by
+    have he := SimpleGraph.isBipartiteWith_sum_degrees_eq hbi
+    simp only [hreg.degree_eq, Finset.sum_const, Nat.nsmul_eq_mul] at he
+    exact Nat.eq_of_mul_eq_mul_right hdpos he
+  have hparts : 2 * B.card = Fintype.card V := by
+    calc
+      2 * B.card = A.card + B.card := by omega
+      _ = (A ∪ B).card := (Finset.card_union_of_disjoint hdisj).symm
+      _ = Fintype.card V := by rw [hcover, Finset.card_univ]
+  let y : V → ZMod 2 := fun v => if C v = c then x.1 v else 0
+  have hyne : y ≠ 0 := by
+    intro h
+    exact hw (by simpa [y, c] using congrFun h w)
+  have hyker : L y = 0 := by
+    funext v
+    change Matrix.mulVec (G.adjMatrix (ZMod 2)) y v = 0
+    rw [G.adjMatrix_mulVec_apply]
+    by_cases hv : C v = c
+    · apply Finset.sum_eq_zero
+      intro u hu
+      have hvu := (G.mem_neighborFinset v u).mp hu
+      have huc : C u ≠ c := by
+        intro h
+        exact C.valid hvu (hv.trans h.symm)
+      simp [y, huc]
+    · have he : (∑ u ∈ G.neighborFinset v, y u) = ∑ u ∈ G.neighborFinset v, x.1 u := by
+        apply Finset.sum_congr rfl
+        intro u hu
+        have huc : C u = c := hcolor _ _ _ (C.valid ((G.mem_neighborFinset v u).mp hu)) hv
+        simp [y, huc]
+      rw [he]
+      have hh := congrFun hxker v
+      change Matrix.mulVec (G.adjMatrix (ZMod 2)) x.1 v = 0 at hh
+      rw [G.adjMatrix_mulVec_apply] at hh
+      exact hh
+  let S : Finset V := Finset.univ.filter (fun v => y v ≠ 0)
+  have hSmem : ∀ v : V, v ∈ S ↔ y v ≠ 0 := by
+    intro v
+    simp [S]
+  have hSA : S ⊆ A := by
+    intro v hv
+    apply (hmemA v).mpr
+    by_contra hvc
+    exact ((hSmem v).mp hv) (by simp [y, hvc])
+  have hone : ∀ a : ZMod 2, a ≠ 0 → a = 1 := by
+    intro a ha
+    apply (ZMod.val_eq_one (by decide : 1 < 2) a).mp
+    have hlt := ZMod.val_lt a
+    have hne : a.val ≠ 0 := (ZMod.val_ne_zero a).mpr ha
+    omega
+  have hfilter : ∀ v : V, S.bipartiteBelow G.Adj v = (G.neighborFinset v).filter (fun u => y u ≠ 0) := by
+    intro v
+    ext u
+    simp only [Finset.mem_bipartiteBelow, hSmem, Finset.mem_filter, G.mem_neighborFinset]
+    constructor
+    · rintro ⟨hyu, huv⟩
+      exact ⟨huv.symm, hyu⟩
+    · rintro ⟨hvu, hyu⟩
+      exact ⟨hyu, hvu.symm⟩
+  have hparity : ∀ v : V, 2 ∣ (S.bipartiteBelow G.Adj v).card := by
+    intro v
+    apply (ZMod.natCast_eq_zero_iff (S.bipartiteBelow G.Adj v).card 2).mp
+    calc
+      ((S.bipartiteBelow G.Adj v).card : ZMod 2) = ∑ u ∈ (G.neighborFinset v).filter (fun u => y u ≠ 0), (1 : ZMod 2) := by
+        rw [hfilter v]
+        simp
+      _ = ∑ u ∈ G.neighborFinset v, y u := by
+        rw [Finset.sum_filter]
+        apply Finset.sum_congr rfl
+        intro u hu
+        by_cases hz : y u = 0
+        · simp [hz]
+        · simp [hz, hone (y u) hz]
+      _ = 0 := by
+        have hh := congrFun hyker v
+        change Matrix.mulVec (G.adjMatrix (ZMod 2)) y v = 0 at hh
+        rwa [G.adjMatrix_mulVec_apply] at hh
+  have hcheck : ∀ v : V, (S.bipartiteBelow G.Adj v).card ≤ 2 * (d / 2) := by
+    intro v
+    have hle : (S.bipartiteBelow G.Adj v).card ≤ d := by
+      calc
+        (S.bipartiteBelow G.Adj v).card = ((G.neighborFinset v).filter (fun u => y u ≠ 0)).card := by rw [hfilter v]
+        _ ≤ (G.neighborFinset v).card := Finset.card_le_card (Finset.filter_subset _ _)
+        _ = d := by rw [G.card_neighborFinset_eq_degree, hreg.degree_eq]
+    obtain ⟨q, hq⟩ := hparity v
+    omega
+  have hcount : S.card * d ≤ B.card * (2 * (d / 2)) := by
+    apply Finset.card_mul_le_card_mul G.Adj
+    · intro u hu
+      have he : G.neighborFinset u = B.bipartiteAbove G.Adj u := SimpleGraph.isBipartiteWith_bipartiteAbove hbi (hSA hu)
+      have hc : (B.bipartiteAbove G.Adj u).card = d := by
+        rw [← he, G.card_neighborFinset_eq_degree, hreg.degree_eq]
+      exact hc.ge
+    · intro v hv
+      exact hcheck v
+  have hbound : d * S.card ≤ Fintype.card V * (d / 2) := by
+    calc
+      d * S.card = S.card * d := Nat.mul_comm _ _
+      _ ≤ B.card * (2 * (d / 2)) := hcount
+      _ = Fintype.card V * (d / 2) := by
+        rw [← hparts]
+        ring
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun z => z ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin z = 0)).image hammingNorm
+  have hW : weights.Nonempty := by simp [weights]
+  have hWle : weights.min' hW ≤ S.card := by
+    change weights.min' hW ≤ hammingNorm y
+    apply Finset.min'_le
+    exact Finset.mem_union_right _ (Finset.mem_image.mpr ⟨y, Finset.mem_filter.mpr ⟨Finset.mem_univ _, hyne, hyker⟩, rfl⟩)
+  have hfinalNat : d * weights.min' hW ≤ Fintype.card V * (d / 2) := (Nat.mul_le_mul_left d hWle).trans hbound
+  have hfloor : Int.floor ((d : ℝ) / 2) = ((d / 2 : ℕ) : ℤ) := by
+    calc
+      Int.floor ((d : ℝ) / 2) = (d : ℤ) / 2 := by
+        simpa only [Nat.cast_ofNat, Int.floor_natCast] using (Int.floor_div_natCast (d : ℝ) 2)
+      _ = ((d / 2 : ℕ) : ℤ) := (Int.natCast_div d 2).symm
+  change (G.minDegree : ℝ) * (weights.min' hW : ℝ) ≤ (Fintype.card V : ℝ) * (Int.floor ((G.minDegree : ℝ) / 2) : ℝ)
+  rw [hmin, hfloor, Int.cast_natCast]
+  exact_mod_cast hfinalNat

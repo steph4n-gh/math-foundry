@@ -1,0 +1,54 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Tactic
+
+
+
+
+open scoped BigOperators
+theorem hull3d_independence_number_ge_0_125__0_00784314_average_degree_size_0_0828eb27ee4f {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Gᶜ.cliqueNum : ℝ) ≥ (((1 / 8 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ))) - ((196078431372549 / 25000000000000000 : ℝ) * (G.edgeFinset.card : ℝ))) := by
+  classical
+  have hm : (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) := Nat.cast_nonneg _
+  by_cases hzero : Fintype.card V = 0
+  · rw [if_pos hzero]
+    have ha : (0 : ℝ) ≤ (Gᶜ.cliqueNum : ℝ) := Nat.cast_nonneg _
+    nlinarith only [hm, ha]
+  · rw [if_neg hzero]
+    have hnNat : 0 < Fintype.card V := Nat.pos_of_ne_zero hzero
+    letI : Nonempty V := Fintype.card_pos_iff.mp hnNat
+    have hn : (0 : ℝ) < (Fintype.card V : ℝ) := by
+      exact_mod_cast hnNat
+    have ha : (1 : ℝ) ≤ (Gᶜ.cliqueNum : ℝ) := by
+      exact_mod_cast (Nat.one_le_iff_ne_zero.mpr (Gᶜ).cliqueNum_ne_zero_of_finite)
+    have hsizeNat : 2 * G.edgeFinset.card ≤ Fintype.card V * Fintype.card V := by
+      calc
+        2 * G.edgeFinset.card = ∑ v : V, G.degree v :=
+          G.sum_degrees_eq_twice_card_edges.symm
+        _ ≤ ∑ _v : V, Fintype.card V :=
+          Finset.sum_le_sum (fun v _ => (G.degree_lt_card_verts v).le)
+        _ = Fintype.card V * Fintype.card V := by simp
+    have hsize : 2 * (G.edgeFinset.card : ℝ) ≤
+        (Fintype.card V : ℝ) * (Fintype.card V : ℝ) := by
+      exact_mod_cast hsizeNat
+    have hquot : 2 * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ) ≤
+        8 + (G.edgeFinset.card : ℝ) / 16 := by
+      apply (div_le_iff₀ hn).2
+      by_cases hlarge : (32 : ℝ) ≤ (Fintype.card V : ℝ)
+      · nlinarith only [hn, mul_nonneg hm (sub_nonneg.mpr hlarge)]
+      · have hsmall : (0 : ℝ) ≤ 32 - (Fintype.card V : ℝ) := by
+          linarith only [hlarge]
+        have hprod : (0 : ℝ) ≤
+            ((Fintype.card V : ℝ) * (Fintype.card V : ℝ) -
+              2 * (G.edgeFinset.card : ℝ)) * (32 - (Fintype.card V : ℝ)) :=
+          mul_nonneg (sub_nonneg.mpr hsize) hsmall
+        have hsquare : (0 : ℝ) ≤
+            (Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 16) ^ 2 :=
+          mul_nonneg hn.le (sq_nonneg _)
+        nlinarith only [hprod, hsquare]
+    nlinarith only [ha, hquot, hm]

@@ -1,0 +1,259 @@
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+
+theorem degree_sum_density_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((2 : ℝ) * (G.edgeFinset.card : ℝ)) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  have hn : 2 * G.edgeFinset.card ≤ Fintype.card V * G.maxDegree := by
+    calc
+      2 * G.edgeFinset.card = ∑ v, G.degree v := G.sum_degrees_eq_twice_card_edges.symm
+      _ ≤ ∑ _v : V, G.maxDegree := Finset.sum_le_sum fun v _ => G.degree_le_maxDegree v
+      _ = Fintype.card V * G.maxDegree := by simp
+  exact_mod_cast hn
+
+theorem clique_le_max_degree_plus_one {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  obtain ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  have hn : G.cliqueNum ≤ G.maxDegree + 1 := by
+    by_cases he : s.Nonempty
+    · obtain ⟨v, hv⟩ := he
+      have hsubset : s.erase v ⊆ G.neighborFinset v := by
+        intro w hw
+        rw [G.mem_neighborFinset]
+        exact hs.isClique hv (Finset.mem_erase.mp hw).2 (Finset.mem_erase.mp hw).1.symm
+      have hcard := Finset.card_le_card hsubset
+      rw [Finset.card_erase_of_mem hv, G.card_neighborFinset_eq_degree, hs.card_eq] at hcard
+      have hmax := G.degree_le_maxDegree v
+      have hpos : 0 < G.cliqueNum := hs.card_eq ▸ Finset.card_pos.mpr ⟨v,hv⟩
+      omega
+    · have : G.cliqueNum = 0 := by
+        rw [← hs.card_eq]
+        exact Finset.card_eq_zero.mpr (Finset.not_nonempty_iff_eq_empty.mp he)
+      omega
+  exact_mod_cast hn
+
+theorem clique_edges_density_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((G.cliqueNum : ℝ) * ((G.cliqueNum : ℝ) - (1 : ℝ))) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+  obtain ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  have hdv : ∀ v ∈ s, (G.cliqueNum : ℝ) - 1 ≤ (G.degree v : ℝ) := by
+    intro v hv
+    have hsubset : s.erase v ⊆ G.neighborFinset v := by
+      intro w hw
+      rw [G.mem_neighborFinset]
+      exact hs.isClique hv (Finset.mem_erase.mp hw).2 (Finset.mem_erase.mp hw).1.symm
+    have hcard := Finset.card_le_card hsubset
+    rw [Finset.card_erase_of_mem hv, G.card_neighborFinset_eq_degree, hs.card_eq] at hcard
+    have hpos : 0 < G.cliqueNum := hs.card_eq ▸ Finset.card_pos.mpr ⟨v,hv⟩
+    have hn : G.cliqueNum ≤ G.degree v + 1 := by omega
+    have hr : (G.cliqueNum : ℝ) ≤ (G.degree v : ℝ) + 1 := by exact_mod_cast hn
+    linarith
+  calc
+    (G.cliqueNum : ℝ) * ((G.cliqueNum : ℝ) - 1) = ∑ v ∈ s, ((G.cliqueNum : ℝ) - 1) := by
+      simp [hs.card_eq]
+      ring
+    _ ≤ ∑ v ∈ s, (G.degree v : ℝ) := Finset.sum_le_sum hdv
+    _ ≤ ∑ v : V, (G.degree v : ℝ) := Finset.sum_le_sum_of_subset_of_nonneg
+      (Finset.subset_univ s) (fun v _ _ => Nat.cast_nonneg _)
+    _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by exact_mod_cast G.sum_degrees_eq_twice_card_edges
+
+theorem composed_b214f1e86200a2e1 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((G.cliqueNum : ℝ) * ((G.cliqueNum : ℝ) - (1 : ℝ))) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  have checked_0 := clique_le_max_degree_plus_one G; have checked_1 := composed_2cd2dd810fbb9720 G; have checked_2 := degree_sum_density_bound G; have checked_3 := archetype_chi_ge_omega G; have checked_4 := chromatic_le_order G; have checked_5 := clique_edges_density_bound G; nlinarith [(show (0 : ℝ) ≤ (Fintype.card V : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.maxDegree : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.cliqueNum : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.chromaticNumber.toNat : ℝ) from Nat.cast_nonneg _)]
+
+theorem pilot_independence_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Gᶜ.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  classical
+  exact composed_2cd2dd810fbb9720 (Gᶜ)
+
+theorem generative_chromatic_degree_pilot {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  have hpartial : ∀ s : Finset V,
+      ∃ c : V → Fin (G.maxDegree + 1),
+        ∀ v ∈ s, ∀ w ∈ s, G.Adj v w → c v ≠ c w := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        refine ⟨fun _ => ⟨0, Nat.zero_lt_succ _⟩, ?_⟩
+        intro v hv
+        simp at hv
+    | @insert a s ha ih =>
+        obtain ⟨c, hc⟩ := ih
+        have hcard : ((G.neighborFinset a).image c).card <
+            (Finset.univ : Finset (Fin (G.maxDegree + 1))).card := by
+          calc
+            ((G.neighborFinset a).image c).card ≤
+                (G.neighborFinset a).card := Finset.card_image_le
+            _ = G.degree a := rfl
+            _ ≤ G.maxDegree := G.degree_le_maxDegree a
+            _ < (Finset.univ : Finset (Fin (G.maxDegree + 1))).card := by simp
+        obtain ⟨d, _, hd⟩ := Finset.exists_mem_notMem_of_card_lt_card hcard
+        have hdc : ∀ w, G.Adj a w → d ≠ c w := by
+          intro w haw heq
+          apply hd
+          exact Finset.mem_image.mpr
+            ⟨w, (G.mem_neighborFinset a w).mpr haw, heq.symm⟩
+        refine ⟨fun v => if v = a then d else c v, ?_⟩
+        intro v hv w hw hvw
+        by_cases hva : v = a
+        · subst v
+          have hwa : w ≠ a := hvw.ne'
+          simpa [hwa] using hdc w hvw
+        · by_cases hwa : w = a
+          · subst w
+            simpa [hva] using (hdc v hvw.symm).symm
+          · have hvs : v ∈ s := (Finset.mem_insert.mp hv).resolve_left hva
+            have hws : w ∈ s := (Finset.mem_insert.mp hw).resolve_left hwa
+            simpa [hva, hwa] using hc v hvs w hws hvw
+  obtain ⟨c, hc⟩ := hpartial Finset.univ
+  have hcolor : G.Colorable (G.maxDegree + 1) :=
+    ⟨SimpleGraph.Coloring.mk c (fun {v w} h =>
+      hc v (Finset.mem_univ v) w (Finset.mem_univ w) h)⟩
+  have hn : G.chromaticNumber.toNat ≤ G.maxDegree + 1 :=
+    ENat.toNat_le_of_le_natCast hcolor.chromaticNumber_le
+  exact_mod_cast hn
+
+theorem archetype_brooks_standard {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  have h := generative_chromatic_degree_pilot G; nlinarith [(show (0 : ℝ) ≤ (Fintype.card V : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.maxDegree : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.cliqueNum : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.chromaticNumber.toNat : ℝ) from Nat.cast_nonneg _)]
+
+theorem model_e679ce9c7fa60e2c7bfd {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((G.chromaticNumber.toNat : ℝ) * ((G.chromaticNumber.toNat : ℝ) - (1 : ℝ))) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+    let n := G.chromaticNumber.toNat
+    obtain ⟨c⟩ := G.colorable_chromaticNumber_of_fintype
+    let H : SimpleGraph (Fin n) := G.map c
+    have hn : (n : ℕ∞) ≤ H.chromaticNumber :=
+      (ENat.natCast_toNat_le_self G.chromaticNumber).trans
+        (SimpleGraph.chromaticNumber_mono_of_hom c.homMap)
+    have hH : H = ⊤ := by
+      apply SimpleGraph.eq_top_of_chromaticNumber_eq_card
+      apply le_antisymm H.chromaticNumber_le_card
+      simpa only [Fintype.card_fin] using hn
+    have hsurj : Function.Surjective c.homMap.mapDart := by
+      intro d
+      obtain ⟨_, u, v, huv, hu, hv⟩ :=
+        (SimpleGraph.map_adj' c G d.fst d.snd).mp d.adj
+      refine ⟨⟨(u, v), huv⟩, ?_⟩
+      apply SimpleGraph.Dart.ext
+      exact Prod.ext hu hv
+    have hcard : Fintype.card H.Dart ≤ Fintype.card G.Dart :=
+      Fintype.card_le_of_surjective c.homMap.mapDart hsurj
+    rw [H.dart_card_eq_twice_card_edges,
+      G.dart_card_eq_twice_card_edges] at hcard
+    have hreal : (2 : ℝ) * (H.edgeFinset.card : ℝ) ≤
+        (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast hcard
+    have hclique : H.cliqueNum = n := by
+      rw [hH, SimpleGraph.cliqueNum_top, Nat.card_fin]
+    have hbound := clique_edges_density_bound H
+    rw [hclique] at hbound
+    exact hbound.trans hreal
+
+theorem composed_ef727e745e60525c {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((G.chromaticNumber.toNat : ℝ) * ((G.chromaticNumber.toNat : ℝ) - (1 : ℝ))) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  exact (model_e679ce9c7fa60e2c7bfd G).trans (degree_sum_density_bound G)
+
+theorem model_8ce30216566f34c2605a {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.edgeFinset.card : ℝ) ≤ (((Fintype.card V : ℝ) - (Gᶜ.cliqueNum : ℝ)) * (G.maxDegree : ℝ)) := by
+  classical
+    obtain ⟨s, hs⟩ := (Gᶜ).exists_isNClique_cliqueNum
+    let t : Finset V := Finset.univ \ s
+    have hcover : G.edgeFinset ⊆ t.biUnion (fun v => G.incidenceFinset v) := by
+      intro e
+      refine Sym2.inductionOn e ?_
+      intro v w he
+      have hadj : G.Adj v w := by
+        simpa only [SimpleGraph.mem_edgeFinset, SimpleGraph.mem_edgeSet] using he
+      by_cases hv : v ∈ s
+      · have hw : w ∉ s := by
+          intro hw
+          exact ((SimpleGraph.compl_adj G v w).mp (hs.isClique hv hw hadj.ne)).2 hadj
+        refine Finset.mem_biUnion.mpr ⟨w, ?_, ?_⟩
+        · simp [t, hw]
+        · simpa only [SimpleGraph.mem_incidenceFinset,
+            SimpleGraph.mk'_mem_incidenceSet_right_iff] using hadj
+      · refine Finset.mem_biUnion.mpr ⟨v, ?_, ?_⟩
+        · simp [t, hv]
+        · simpa only [SimpleGraph.mem_incidenceFinset,
+            SimpleGraph.mk'_mem_incidenceSet_left_iff] using hadj
+    have hn : G.edgeFinset.card ≤ t.card * G.maxDegree := by
+      calc
+        G.edgeFinset.card ≤ (t.biUnion (fun v => G.incidenceFinset v)).card :=
+          Finset.card_le_card hcover
+        _ ≤ ∑ v ∈ t, (G.incidenceFinset v).card := Finset.card_biUnion_le
+        _ = ∑ v ∈ t, G.degree v := by
+          simp only [G.card_incidenceFinset_eq_degree]
+        _ ≤ ∑ _v ∈ t, G.maxDegree :=
+          Finset.sum_le_sum fun v _ => G.degree_le_maxDegree v
+        _ = t.card * G.maxDegree := by simp
+    have hcard : t.card + Gᶜ.cliqueNum = Fintype.card V := by
+      simpa only [t, hs.card_eq, Finset.card_univ] using
+        Finset.card_sdiff_add_card_eq_card (Finset.subset_univ s)
+    have hcard_real : (t.card : ℝ) + (Gᶜ.cliqueNum : ℝ) = (Fintype.card V : ℝ) := by
+      exact_mod_cast hcard
+    have ht : (t.card : ℝ) = (Fintype.card V : ℝ) - (Gᶜ.cliqueNum : ℝ) := by
+      linarith
+    have hbound : (G.edgeFinset.card : ℝ) ≤ (t.card : ℝ) * (G.maxDegree : ℝ) := by
+      exact_mod_cast hn
+    rw [ht] at hbound
+    exact hbound
+theorem archetype_ramsey_chi_alpha {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((Fintype.card V : ℝ) ≥ (9999999 / 10000000 : ℝ))) :
+    (G.chromaticNumber.toNat : ℝ) ≥ ((Fintype.card V : ℝ) / (Gᶜ.cliqueNum : ℝ)) := by
+  sorry

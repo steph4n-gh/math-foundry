@@ -1,0 +1,220 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Constructions
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem model_58528c34ec3c39380ad7 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((G.minDegree : ℝ) ≥ (29999999 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)))) :
+    (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≤ (((G.edgeFinset.card : ℝ) - (Fintype.card V : ℝ)) + (1 : ℝ)) := by
+  classical
+  have hconn : G.Connected := h_guard.1
+  letI : Nonempty V := hconn.nonempty
+  have hminR : (2 : ℝ) < (G.minDegree : ℝ) := by
+    linarith only [h_guard.2.1]
+  have hminN : 2 < G.minDegree := by
+    exact_mod_cast hminR
+  have hdeg (v : V) : 3 ≤ G.degree v := by
+    have h := G.minDegree_le_degree v
+    omega
+  let K := LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin
+  let D : ℕ := ∑ v : V, (G.degree v - 3)
+  have hrows (x : K) (u : V) :
+      (∑ w ∈ G.neighborFinset u, x.1 w) = 0 := by
+    have h := congrFun (LinearMap.mem_ker.mp x.property) u
+    simpa only [Matrix.mulVecLin_apply, SimpleGraph.adjMatrix_mulVec_apply,
+      Pi.zero_apply] using h
+  have aux : ∀ Q S : Finset V,
+      S.Nonempty →
+      (∀ u ∈ S, ∃ v ∈ S, G.Adj u v) →
+      (∀ u, u ∉ Q → G.neighborFinset u ⊆ S) →
+      ∃ r : Finset V,
+        2 * r.card ≤ (∑ u ∈ Q, (G.degree u - 3)) + (Sᶜ).card ∧
+        ∀ x : K, (∀ v ∈ S, x.1 v = 0) →
+          (∀ v ∈ r, x.1 v = 0) → x = 0 := by
+    intro Q
+    refine Finset.strongInductionOn Q ?_
+    intro Q ih S hnon hlocal hprocessed
+    by_cases hfull : S = Finset.univ
+    · refine ⟨∅, by simp, ?_⟩
+      intro x hxS _
+      apply Subtype.ext
+      funext v
+      change x.1 v = 0
+      exact hxS v (by simp [hfull])
+    · have hboundary : ∃ u ∈ S, ∃ w, G.Adj u w ∧ w ∉ S := by
+        by_contra h
+        have hclosed {u v : V} (hu : u ∈ S) (huv : G.Adj u v) : v ∈ S := by
+          by_contra hv
+          exact h ⟨u, hu, v, huv, hv⟩
+        have hwalk {u v : V} (p : G.Walk u v) : u ∈ S → v ∈ S := by
+          induction p with
+          | nil => exact fun hu => hu
+          | @cons u t v hut p ih =>
+            intro hu
+            exact ih (hclosed hu hut)
+        obtain ⟨a, ha⟩ := hnon
+        apply hfull
+        apply Finset.eq_univ_iff_forall.mpr
+        intro v
+        exact hwalk (hconn a v).some ha
+      obtain ⟨u, huS, w, huw, hwS⟩ := hboundary
+      have hwN : w ∈ G.neighborFinset u := (G.mem_neighborFinset u w).mpr huw
+      have huQ : u ∈ Q := by
+        by_contra hu
+        exact hwS (hprocessed u hu hwN)
+      obtain ⟨v, hvS, huv⟩ := hlocal u huS
+      have hvN : v ∈ G.neighborFinset u := (G.mem_neighborFinset u v).mpr huv
+      let R : Finset V := (G.neighborFinset u \ S).erase w
+      have hnew : R.card + 1 = (G.neighborFinset u \ S).card :=
+        Finset.card_erase_add_one (Finset.mem_sdiff.mpr ⟨hwN, hwS⟩)
+      have hIpos : 0 < (G.neighborFinset u ∩ S).card :=
+        Finset.card_pos.mpr ⟨v, Finset.mem_inter.mpr ⟨hvN, hvS⟩⟩
+      have hRcost : 2 * R.card ≤
+          (G.degree u - 3) + (G.neighborFinset u \ S).card := by
+        have hc := Finset.card_sdiff_add_card_inter (G.neighborFinset u) S
+        rw [G.card_neighborFinset_eq_degree] at hc
+        have hd := hdeg u
+        omega
+      let S' : Finset V := S ∪ G.neighborFinset u
+      have hgrowth := Finset.card_sdiff_add_card (G.neighborFinset u) S
+      rw [Finset.union_comm] at hgrowth
+      change (G.neighborFinset u \ S).card + S.card = S'.card at hgrowth
+      have hremain : (S'ᶜ).card + (G.neighborFinset u \ S).card = (Sᶜ).card := by
+        have hc := Finset.card_compl_add_card S
+        have hc' := Finset.card_compl_add_card S'
+        omega
+      have hlocal' : ∀ z ∈ S', ∃ t ∈ S', G.Adj z t := by
+        intro z hz
+        rcases Finset.mem_union.mp hz with hz | hz
+        · obtain ⟨t, ht, hzt⟩ := hlocal z hz
+          exact ⟨t, Finset.mem_union_left _ ht, hzt⟩
+        · exact ⟨u, Finset.mem_union_left _ huS,
+            ((G.mem_neighborFinset u z).mp hz).symm⟩
+      have hprocessed' : ∀ z, z ∉ Q.erase u → G.neighborFinset z ⊆ S' := by
+        intro z hz
+        by_cases hzu : z = u
+        · subst z
+          intro t ht
+          exact Finset.mem_union_right _ ht
+        · have hzQ : z ∉ Q := by
+            intro hzQ
+            exact hz (Finset.mem_erase.mpr ⟨hzu, hzQ⟩)
+          intro t ht
+          exact Finset.mem_union_left _ (hprocessed z hzQ ht)
+      obtain ⟨r, hr, hkill⟩ :=
+        ih (Q.erase u) (Finset.erase_ssubset huQ) S'
+          ⟨u, Finset.mem_union_left _ huS⟩ hlocal' hprocessed'
+      refine ⟨R ∪ r, ?_, ?_⟩
+      · have hc := Finset.card_union_le R r
+        have he := Finset.sum_erase_add Q (fun z => G.degree z - 3) huQ
+        omega
+      · intro x hxS hxseed
+        have hxR : ∀ z ∈ R, x.1 z = 0 := by
+          intro z hz
+          exact hxseed z (Finset.mem_union_left _ hz)
+        have hxw : x.1 w = 0 := by
+          have hs : (∑ z ∈ G.neighborFinset u, x.1 z) = x.1 w := by
+            apply Finset.sum_eq_single w
+            · intro z hz hzw
+              by_cases hzS : z ∈ S
+              · exact hxS z hzS
+              · apply hxR z
+                exact Finset.mem_erase.mpr
+                  ⟨hzw, Finset.mem_sdiff.mpr ⟨hz, hzS⟩⟩
+            · intro hw
+              exact False.elim (hw hwN)
+          exact hs.symm.trans (hrows x u)
+        have hxS' : ∀ z ∈ S', x.1 z = 0 := by
+          intro z hz
+          rcases Finset.mem_union.mp hz with hz | hz
+          · exact hxS z hz
+          · by_cases hzw : z = w
+            · simpa only [hzw] using hxw
+            · by_cases hzS : z ∈ S
+              · exact hxS z hzS
+              · exact hxR z (Finset.mem_erase.mpr
+                  ⟨hzw, Finset.mem_sdiff.mpr ⟨hz, hzS⟩⟩)
+        exact hkill x hxS' (fun z hz => hxseed z (Finset.mem_union_right _ hz))
+  obtain ⟨a⟩ := hconn.nonempty
+  have haN : 0 < (G.neighborFinset a).card := by
+    rw [G.card_neighborFinset_eq_degree]
+    have h := hdeg a
+    omega
+  obtain ⟨b, hb⟩ := Finset.card_pos.mp haN
+  have hab : G.Adj a b := (G.mem_neighborFinset a b).mp hb
+  have hlocal0 : ∀ u ∈ ({a, b} : Finset V),
+      ∃ v ∈ ({a, b} : Finset V), G.Adj u v := by
+    intro u hu
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hu
+    rcases hu with rfl | rfl
+    · exact ⟨b, by simp, hab⟩
+    · exact ⟨a, by simp, hab.symm⟩
+  obtain ⟨r, hr, hkill⟩ := aux Finset.univ ({a, b} : Finset V)
+    ⟨a, by simp⟩ hlocal0 (by
+      intro u hu
+      exact False.elim (hu (Finset.mem_univ u)))
+  have hrD : 2 * r.card ≤ D + (({a, b} : Finset V)ᶜ).card := hr
+  let q : Finset V := ({a, b} : Finset V) ∪ r
+  have hpair : ({a, b} : Finset V).card = 2 := Finset.card_pair hab.ne
+  have hqcard : q.card ≤ r.card + 2 := by
+    have hc := Finset.card_union_le ({a, b} : Finset V) r
+    rw [hpair] at hc
+    change (({a, b} : Finset V) ∪ r).card ≤ r.card + 2
+    omega
+  let F : K →ₗ[ZMod 2] (q → ZMod 2) :=
+    LinearMap.pi fun v : q => (LinearMap.proj (v : V)).domRestrict K
+  have hFi : Function.Injective F := by
+    intro x y hxy
+    have hz (v : V) (hv : v ∈ q) : (x - y).1 v = 0 := by
+      have h := congrFun hxy (⟨v, hv⟩ : q)
+      change x.1 v = y.1 v at h
+      change x.1 v - y.1 v = 0
+      exact sub_eq_zero.mpr h
+    apply sub_eq_zero.mp
+    apply hkill (x - y)
+    · intro v hv
+      exact hz v (Finset.mem_union_left _ hv)
+    · intro v hv
+      exact hz v (Finset.mem_union_right _ hv)
+  have hdim : Module.finrank (ZMod 2) K ≤ q.card := by
+    simpa only [Module.finrank_fintype_fun_eq_card, Fintype.card_coe] using
+      LinearMap.finrank_le_finrank_of_injective hFi
+  have hbudget : D + 3 * Fintype.card V = 2 * G.edgeFinset.card := by
+    have hs : (∑ v : V, ((G.degree v - 3) + 3)) = ∑ v : V, G.degree v := by
+      apply Finset.sum_congr rfl
+      intro v _
+      exact Nat.sub_add_cancel (hdeg v)
+    simpa only [D, Finset.sum_add_distrib, Finset.sum_const,
+      Finset.card_univ, nsmul_eq_mul, Nat.cast_id, Nat.mul_comm,
+      G.sum_degrees_eq_twice_card_edges] using hs
+  have hcomp := Finset.card_compl_add_card ({a, b} : Finset V)
+  rw [hpair] at hcomp
+  have hn : Module.finrank (ZMod 2) K + Fintype.card V ≤
+      G.edgeFinset.card + 1 := by
+    omega
+  have hnR : (Module.finrank (ZMod 2) K : ℝ) + (Fintype.card V : ℝ) ≤
+      (G.edgeFinset.card : ℝ) + 1 := by
+    exact_mod_cast hn
+  change (Module.finrank (ZMod 2) K : ℝ) ≤ _
+  linarith only [hnR]

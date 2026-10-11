@@ -1,0 +1,415 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Constructions
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem hull3d_order_ge_1_0_laplacian_spectral_radius_signless_laplacian_spectral_radius_0_is_connected_88f94a53c8e1 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Connected)) :
+    (Fintype.card V : ℝ) ≥ (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_lapMatrix ℝ).eigenvalues)) := by
+  classical
+  by_cases hn : Fintype.card V = 0
+  · simp [hn]
+  · rw [if_neg hn]
+    haveI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hn)
+    apply csSup_le (Set.range_nonempty _)
+    rintro _ ⟨i, rfl⟩
+    let u : EuclideanSpace ℝ V := (G.isHermitian_lapMatrix ℝ).eigenvectorBasis i
+    let x : V → ℝ := ⇑u
+    have hu : ‖u‖ = 1 :=
+      (G.isHermitian_lapMatrix ℝ).eigenvectorBasis.orthonormal.1 i
+    have hnorm : (∑ v : V, (x v) ^ 2) = 1 := by
+      have hh := EuclideanSpace.real_norm_sq_eq u
+      rw [hu, one_pow] at hh
+      exact hh.symm
+    have heig : (G.isHermitian_lapMatrix ℝ).eigenvalues i =
+        Matrix.toLinearMap₂' ℝ (G.lapMatrix ℝ) x x := by
+      simpa only [Matrix.toLinearMap₂'_apply', star_trivial, RCLike.re_to_real]
+        using (G.isHermitian_lapMatrix ℝ).eigenvalues_eq i
+    have hsumle :
+        (∑ v : V, ∑ w : V, if G.Adj v w then (x v - x w) ^ 2 else 0) ≤
+        (∑ v : V, ∑ w : V, (x v - x w) ^ 2) := by
+      apply Finset.sum_le_sum
+      intro v _
+      apply Finset.sum_le_sum
+      intro w _
+      by_cases hadj : G.Adj v w
+      · simp only [if_pos hadj, le_refl]
+      · simpa only [if_neg hadj] using sq_nonneg (x v - x w)
+    have hsum :
+        (∑ v : V, ∑ w : V, (x v - x w) ^ 2) =
+        2 * ((Fintype.card V : ℝ) * (∑ v : V, (x v) ^ 2) -
+          (∑ v : V, x v) ^ 2) := by
+      have hrow (v : V) :
+          (∑ w : V, (x v - x w) ^ 2) =
+          (Fintype.card V : ℝ) * (x v) ^ 2 -
+            2 * x v * (∑ w : V, x w) + (∑ w : V, (x w) ^ 2) := by
+        simp only [sub_sq, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+          Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ← Finset.mul_sum]
+      simp_rw [hrow]
+      rw [Finset.sum_add_distrib, Finset.sum_sub_distrib,
+        ← Finset.mul_sum, ← Finset.sum_mul, ← Finset.mul_sum,
+        Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+      ring
+    rw [hsum, hnorm] at hsumle
+    rw [heig, G.lapMatrix_toLinearMap₂' ℝ x]
+    apply (div_le_iff₀ (by norm_num : (0 : ℝ) < 2)).mpr
+    linarith only [hsumle, sq_nonneg (∑ v : V, x v)]
+
+theorem model_2b5ad0c361dc68282aa2 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((Fintype.card V : ℝ) ≥ (19999999 / 10000000 : ℝ)))) :
+    ((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_lapMatrix ℝ).eigenvalues)) + (((Fintype.card V : ℝ) - (2 : ℝ)) * (letI : Decidable G.Connected := Classical.propDecidable _; if G.Connected then (if h : 2 ≤ Fintype.card V then (G.isHermitian_lapMatrix ℝ).eigenvalues₀ ⟨Fintype.card V - 2, by omega⟩ else (0 : ℝ)) else (0 : ℝ)))) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+  have hn : 2 ≤ Fintype.card V := by
+    by_contra h
+    have hn' : Fintype.card V ≤ 1 := by omega
+    have hc : (Fintype.card V : ℝ) ≤ 1 := by exact_mod_cast hn'
+    linarith [h_guard.2]
+  have hn0 : Fintype.card V ≠ 0 := by omega
+  have hconn : G.Connected := h_guard.1
+  let H := G.isHermitian_lapMatrix ℝ
+  let f := H.eigenvalues₀
+  let e : Fin (Fintype.card V) ≃ V :=
+    Fintype.equivOfCardEq (Fintype.card_fin _)
+  have he (i : Fin (Fintype.card V)) : H.eigenvalues (e i) = f i := by
+    change f (e.symm (e i)) = f i
+    rw [e.symm_apply_apply]
+  have hnonneg (i : Fin (Fintype.card V)) : 0 ≤ f i := by
+    rw [← he i, H.eigenvalues_eq]
+    simpa only [RCLike.re_to_real] using
+      (G.posSemidef_lapMatrix ℝ).dotProduct_mulVec_nonneg
+        (⇑(H.eigenvectorBasis (e i)))
+  have hsum : (∑ i : Fin (Fintype.card V), f i) =
+      (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+    calc
+      (∑ i : Fin (Fintype.card V), f i) =
+          ∑ i : Fin (Fintype.card V), H.eigenvalues (e i) := by
+        apply Finset.sum_congr rfl
+        intro i _
+        exact (he i).symm
+      _ = ∑ v : V, H.eigenvalues v := e.sum_comp H.eigenvalues
+      _ = Matrix.trace (G.lapMatrix ℝ) := H.trace_eq_sum_eigenvalues.symm
+      _ = ∑ v : V, (G.degree v : ℝ) := by
+        rw [SimpleGraph.lapMatrix, Matrix.trace_sub, G.trace_adjMatrix ℝ,
+          sub_zero, SimpleGraph.degMatrix, Matrix.trace_diagonal]
+      _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+        exact_mod_cast G.sum_degrees_eq_twice_card_edges
+  let i0 : Fin (Fintype.card V) := ⟨0, by omega⟩
+  let ilast : Fin (Fintype.card V) := ⟨Fintype.card V - 1, by omega⟩
+  let ia : Fin (Fintype.card V) := ⟨Fintype.card V - 2, by omega⟩
+  have hsup : sSup (Set.range H.eigenvalues) ≤ f i0 := by
+    apply csSup_le
+    · exact ⟨H.eigenvalues (e i0), ⟨e i0, rfl⟩⟩
+    · rintro x ⟨v, rfl⟩
+      change f (e.symm v) ≤ f i0
+      exact H.eigenvalues₀_antitone (by
+        change 0 ≤ (e.symm v).val
+        exact Nat.zero_le _)
+  have hi_ne : ilast ≠ i0 := by
+    intro h
+    have hv := congrArg Fin.val h
+    dsimp only [ilast, i0] at hv
+    omega
+  have hil_mem : ilast ∈
+      (Finset.univ : Finset (Fin (Fintype.card V))).erase i0 := by
+    simp only [Finset.mem_erase, Finset.mem_univ, and_true]
+    exact hi_ne
+  let T : Finset (Fin (Fintype.card V)) :=
+    ((Finset.univ : Finset (Fin (Fintype.card V))).erase i0).erase ilast
+  have hcard : T.card = Fintype.card V - 2 := by
+    dsimp only [T]
+    rw [Finset.card_erase_of_mem hil_mem,
+      Finset.card_erase_of_mem (Finset.mem_univ i0),
+      Finset.card_univ, Fintype.card_fin]
+    omega
+  have hcard_real : (T.card : ℝ) = (Fintype.card V : ℝ) - 2 := by
+    rw [hcard, Nat.cast_sub hn]
+    norm_num
+  have hmiddle : ((Fintype.card V : ℝ) - 2) * f ia ≤ ∑ i ∈ T, f i := by
+    calc
+      ((Fintype.card V : ℝ) - 2) * f ia = ∑ _i ∈ T, f ia := by
+        simp only [Finset.sum_const, nsmul_eq_mul]
+        rw [hcard_real]
+      _ ≤ ∑ i ∈ T, f i := by
+        apply Finset.sum_le_sum
+        intro i hi
+        apply H.eigenvalues₀_antitone
+        have hne : i ≠ ilast := (Finset.mem_erase.mp hi).1
+        have hvne : i.val ≠ Fintype.card V - 1 := by
+          intro hv
+          apply hne
+          exact Fin.ext hv
+        have hi_lt : i.val < Fintype.card V := i.isLt
+        change i.val ≤ Fintype.card V - 2
+        omega
+  have hdecomp : (∑ i ∈ T, f i) + f ilast + f i0 =
+      ∑ i : Fin (Fintype.card V), f i := by
+    dsimp only [T]
+    rw [Finset.sum_erase_add _ _ hil_mem,
+      Finset.sum_erase_add _ _ (Finset.mem_univ i0)]
+  have hbound : f i0 + ((Fintype.card V : ℝ) - 2) * f ia ≤
+      (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+    linarith only [hsum, hdecomp, hmiddle, hnonneg ilast]
+  simp only [if_neg hn0, if_pos hconn, dif_pos hn]
+  change sSup (Set.range H.eigenvalues) +
+    ((Fintype.card V : ℝ) - 2) * f ia ≤
+      (2 : ℝ) * (G.edgeFinset.card : ℝ)
+  linarith only [hsup, hbound]
+
+theorem model_69d93273dcefb22a5491 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((∃ d : ℕ, G.IsRegularOfDegree d)) ∧ ((Fintype.card V : ℝ) ≥ (19999999 / 10000000 : ℝ)))) :
+    (((((Fintype.card V : ℝ) - (1 : ℝ)) * (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_lapMatrix ℝ).eigenvalues))) - ((Fintype.card V : ℝ) * (G.maxDegree : ℝ))) * (((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) - (((Fintype.card V : ℝ) - (1 : ℝ)) * (letI : Decidable G.Connected := Classical.propDecidable _; if G.Connected then (if h : 2 ≤ Fintype.card V then (G.isHermitian_lapMatrix ℝ).eigenvalues₀ ⟨Fintype.card V - 2, by omega⟩ else (0 : ℝ)) else (0 : ℝ))))) ≥ (((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) * (((Fintype.card V : ℝ) - (G.maxDegree : ℝ)) - (1 : ℝ))) := by
+  classical
+  have hn : 2 ≤ Fintype.card V := by
+    by_contra h
+    have hc : (Fintype.card V : ℝ) ≤ 1 := by
+      exact_mod_cast (show Fintype.card V ≤ 1 from by omega)
+    have hh := h_guard.2.2
+    norm_num at hh
+    linarith
+  have hn0 : Fintype.card V ≠ 0 := by omega
+  letI : Nonempty V := Fintype.card_pos_iff.mp (by omega)
+  obtain ⟨d, hd⟩ := h_guard.2.1
+  have hdmax : G.maxDegree = d := hd.maxDegree_eq
+  let N : ℝ := (Fintype.card V : ℝ)
+  let D : ℝ := (d : ℝ)
+  let L : Matrix V V ℝ := G.lapMatrix ℝ
+  let ev : V → ℝ := (G.isHermitian_lapMatrix ℝ).eigenvalues
+  let lam : Fin (Fintype.card V) → ℝ := (G.isHermitian_lapMatrix ℝ).eigenvalues₀
+  let e : Fin (Fintype.card V) ≃ V := Fintype.equivOfCardEq (Fintype.card_fin _)
+  have he (i : Fin (Fintype.card V)) : ev (e i) = lam i := by
+    change (G.isHermitian_lapMatrix ℝ).eigenvalues₀ (e.symm (e i)) = _
+    rw [Equiv.symm_apply_apply]
+  have htransport (f : ℝ → ℝ) :
+      (∑ i : Fin (Fintype.card V), f (lam i)) = ∑ v : V, f (ev v) :=
+    Fintype.sum_equiv e _ _ (fun i => congrArg f ((he i).symm))
+  have hsumV : (∑ v : V, ev v) = N * D := by
+    calc
+      _ = Matrix.trace L := (G.isHermitian_lapMatrix ℝ).trace_eq_sum_eigenvalues.symm
+      _ = N * D := by
+        simp [L, SimpleGraph.lapMatrix, SimpleGraph.degMatrix, hd.degree_eq, N, D]
+  have hLreg : L = Matrix.diagonal (fun _ : V => D) - G.adjMatrix ℝ := by
+    simp only [L, SimpleGraph.lapMatrix, SimpleGraph.degMatrix, hd.degree_eq, D]
+  have hsqtrace : Matrix.trace (L * L) = N * D * (D + 1) := by
+    have hzero (i : V) :
+        (∑ u ∈ G.neighborFinset i,
+          Matrix.diagonal (fun _ : V => (d : ℝ)) i u) = 0 := by
+      apply Finset.sum_eq_zero
+      intro u hu
+      have hiu : G.Adj i u := by
+        simpa only [G.mem_neighborFinset] using hu
+      exact Matrix.diagonal_apply_ne _ hiu.ne
+    simp only [hLreg, sub_mul, mul_sub, Matrix.trace_sub]
+    simp [Matrix.trace, G.adjMatrix_mul_self_apply_self, hd.degree_eq, N, D, hzero]
+    ring
+  let U := (G.isHermitian_lapMatrix ℝ).eigenvectorUnitary
+  let C := Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) (star U)
+  have hC : C L = Matrix.diagonal ev := by
+    simpa only [C, U, L, ev, RCLike.ofReal_real_eq_id, Function.id_comp] using
+      (G.isHermitian_lapMatrix ℝ).conjStarAlgAut_star_eigenvectorUnitary
+  have htr (B : Matrix V V ℝ) : Matrix.trace (C B) = Matrix.trace B := by
+    change Matrix.trace (Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) (star U) B) = _
+    rw [Unitary.conjStarAlgAut_star_apply, Matrix.trace_mul_cycle]
+    have hU : (U : Matrix V V ℝ) * star (U : Matrix V V ℝ) = 1 :=
+      Unitary.mul_star_self_of_mem U.property
+    rw [hU, one_mul]
+  have hsqspec : (∑ v : V, ev v ^ 2) = Matrix.trace (L * L) := by
+    calc
+      _ = Matrix.trace (Matrix.diagonal ev * Matrix.diagonal ev) := by
+        simp only [Matrix.diagonal_mul_diagonal, Matrix.trace_diagonal, pow_two]
+      _ = Matrix.trace (C (L * L)) := by
+        simp only [map_mul, hC]
+      _ = Matrix.trace (L * L) := htr _
+  have hnonneg (v : V) : 0 ≤ ev v := by
+    dsimp only [ev]
+    rw [(G.isHermitian_lapMatrix ℝ).eigenvalues_eq v]
+    simpa only [RCLike.re_to_real] using
+      (G.posSemidef_lapMatrix ℝ).dotProduct_mulVec_nonneg
+        (⇑((G.isHermitian_lapMatrix ℝ).eigenvectorBasis v))
+  have hzrange : (0 : ℝ) ∈ Set.range ev := by
+    change (0 : ℝ) ∈ Set.range (G.isHermitian_lapMatrix ℝ).eigenvalues
+    rw [← (G.isHermitian_lapMatrix ℝ).spectrum_real_eq_range_eigenvalues]
+    exact G.zero_mem_spectrum_lapMatrix ℝ
+  obtain ⟨v, hv⟩ := hzrange
+  let z : Fin (Fintype.card V) := ⟨Fintype.card V - 1, by omega⟩
+  let t : Fin (Fintype.card V) := ⟨Fintype.card V - 2, by omega⟩
+  let s : Finset (Fin (Fintype.card V)) := Finset.univ.erase z
+  let A : ℝ := lam t
+  let B : ℝ := sSup (Set.range ev)
+  have hiz (i : Fin (Fintype.card V)) : i ≤ z := by
+    change i.val ≤ Fintype.card V - 1
+    have hi := i.isLt
+    omega
+  have hlast : lam z = 0 := by
+    apply le_antisymm
+    · calc
+        lam z ≤ lam (e.symm v) :=
+          (G.isHermitian_lapMatrix ℝ).eigenvalues₀_antitone (hiz _)
+        _ = ev v := by
+          simpa only [Equiv.apply_symm_apply] using (he (e.symm v)).symm
+        _ = 0 := hv
+    · rw [← he z]
+      exact hnonneg (e z)
+  have hsCard : (s.card : ℝ) = N - 1 := by
+    have hc : s.card = Fintype.card V - 1 := by
+      dsimp only [s]
+      rw [Finset.card_erase_of_mem (Finset.mem_univ z), Finset.card_univ,
+        Fintype.card_fin]
+    rw [hc, Nat.cast_sub (by omega : 1 ≤ Fintype.card V)]
+    simp only [Nat.cast_one, N]
+  have hsSum : (∑ i ∈ s, lam i) = N * D := by
+    calc
+      _ = ∑ i : Fin (Fintype.card V), lam i := Finset.sum_erase _ hlast
+      _ = ∑ w : V, ev w := htransport (fun x => x)
+      _ = N * D := hsumV
+  have hsSq : (∑ i ∈ s, lam i ^ 2) = N * D * (D + 1) := by
+    calc
+      _ = ∑ i : Fin (Fintype.card V), lam i ^ 2 :=
+        Finset.sum_erase _ (by rw [hlast]; norm_num)
+      _ = ∑ w : V, ev w ^ 2 := htransport (fun x => x ^ 2)
+      _ = Matrix.trace (L * L) := hsqspec
+      _ = N * D * (D + 1) := hsqtrace
+  have ha (i : Fin (Fintype.card V)) (hi : i ∈ s) : A ≤ lam i := by
+    apply (G.isHermitian_lapMatrix ℝ).eigenvalues₀_antitone
+    change i.val ≤ Fintype.card V - 2
+    have hiNe : i ≠ z := (Finset.mem_erase.mp hi).1
+    have hiValNe : i.val ≠ Fintype.card V - 1 := by
+      intro hh
+      apply hiNe
+      apply Fin.ext
+      exact hh
+    have hiLt := i.isLt
+    omega
+  have hb (i : Fin (Fintype.card V)) : lam i ≤ B := by
+    rw [← he i]
+    exact le_csSup (Set.finite_range ev).bddAbove ⟨e i, rfl⟩
+  have hbound : 0 ≤ ∑ i ∈ s, (B - lam i) * (lam i - A) :=
+    Finset.sum_nonneg (fun i hi =>
+      mul_nonneg (sub_nonneg.mpr (hb i)) (sub_nonneg.mpr (ha i hi)))
+  have hexpand :
+      (∑ i ∈ s, (B - lam i) * (lam i - A)) =
+        (A + B) * (N * D) - N * D * (D + 1) - (N - 1) * A * B := by
+    calc
+      _ = ∑ i ∈ s, ((A + B) * lam i - lam i ^ 2 - A * B) :=
+        Finset.sum_congr rfl (fun i _ => by ring)
+      _ = _ := by
+        simp only [Finset.sum_sub_distrib]
+        rw [← Finset.mul_sum, hsSum, hsSq]
+        simp only [Finset.sum_const, nsmul_eq_mul]
+        rw [hsCard]
+        ring
+  rw [hexpand] at hbound
+  have hN1 : 0 ≤ N - 1 := by
+    have hNr : (2 : ℝ) ≤ (Fintype.card V : ℝ) := by exact_mod_cast hn
+    dsimp only [N]
+    linarith only [hNr]
+  have hmain := mul_nonneg hN1 hbound
+  simp only [if_neg hn0, if_pos h_guard.1, dif_pos hn, hdmax]
+  change ((N - 1) * B - N * D) * (N * D - (N - 1) * A) ≥
+    N * D * (N - D - 1)
+  calc
+    ((N - 1) * B - N * D) * (N * D - (N - 1) * A) =
+        N * D * (N - D - 1) +
+          (N - 1) * ((A + B) * (N * D) - N * D * (D + 1) - (N - 1) * A * B) := by
+      ring
+    _ ≥ N * D * (N - D - 1) := le_add_of_nonneg_right hmain
+
+theorem model_b2848857e600ffe393f5 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((Fintype.card V : ℝ) ≥ (19999999 / 10000000 : ℝ))) :
+    (((Fintype.card V : ℝ) - (1 : ℝ)) * (letI : Decidable G.Connected := Classical.propDecidable _; if G.Connected then (if h : 2 ≤ Fintype.card V then (G.isHermitian_lapMatrix ℝ).eigenvalues₀ ⟨Fintype.card V - 2, by omega⟩ else (0 : ℝ)) else (0 : ℝ))) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+  by_cases hc : G.Connected
+  · simp only [if_pos hc]
+    by_cases hn : 2 ≤ Fintype.card V
+    · simp only [dif_pos hn]
+      letI : Nonempty V := Fintype.card_pos_iff.mp (by omega)
+      let hL := G.isHermitian_lapMatrix ℝ
+      let ev := hL.eigenvalues₀
+      let e : Fin (Fintype.card V) ≃ V :=
+        Fintype.equivOfCardEq (Fintype.card_fin _)
+      have heval (i : Fin (Fintype.card V)) :
+          hL.eigenvalues (e i) = ev i := by
+        simp only [Matrix.IsHermitian.eigenvalues, e, ev, Equiv.symm_apply_apply]
+      have hnonneg (i : Fin (Fintype.card V)) : 0 ≤ ev i := by
+        rw [← heval i, hL.eigenvalues_eq]
+        simpa only [RCLike.re_to_real] using
+          (SimpleGraph.posSemidef_lapMatrix ℝ G).dotProduct_mulVec_nonneg
+            (⇑(hL.eigenvectorBasis (e i)))
+      have hzero : ∃ i : Fin (Fintype.card V), ev i = 0 := by
+        have hz : (0 : ℝ) ∈ spectrum ℝ (G.lapMatrix ℝ) :=
+          G.zero_mem_spectrum_lapMatrix ℝ
+        rw [hL.spectrum_real_eq_range_eigenvalues] at hz
+        obtain ⟨v, hv⟩ := hz
+        refine ⟨e.symm v, ?_⟩
+        simpa only [ev, Matrix.IsHermitian.eigenvalues, e] using hv
+      let last : Fin (Fintype.card V) := ⟨Fintype.card V - 1, by omega⟩
+      let second : Fin (Fintype.card V) := ⟨Fintype.card V - 2, by omega⟩
+      have hlast : ev last = 0 := by
+        obtain ⟨i, hi⟩ := hzero
+        have hilast : i ≤ last := by
+          change i.val ≤ Fintype.card V - 1
+          have hi_lt := i.isLt
+          omega
+        have hle : ev last ≤ ev i := hL.eigenvalues₀_antitone hilast
+        rw [hi] at hle
+        exact le_antisymm hle (hnonneg last)
+      have hpoint (i : Fin (Fintype.card V))
+          (hi : i ∈ (Finset.univ : Finset (Fin (Fintype.card V))).erase last) :
+          ev second ≤ ev i := by
+        have hne : i.val ≠ Fintype.card V - 1 := by
+          intro hv
+          exact (Finset.mem_erase.mp hi).1 (Fin.ext hv)
+        have hisecond : i ≤ second := by
+          change i.val ≤ Fintype.card V - 2
+          have hi_lt := i.isLt
+          omega
+        exact hL.eigenvalues₀_antitone hisecond
+      have htrace : (∑ i : Fin (Fintype.card V), ev i) =
+          (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+        calc
+          (∑ i : Fin (Fintype.card V), ev i) =
+              ∑ v : V, hL.eigenvalues v := by
+            simpa only [heval] using e.sum_comp hL.eigenvalues
+          _ = (G.lapMatrix ℝ).trace := hL.trace_eq_sum_eigenvalues.symm
+          _ = ∑ v : V, (G.degree v : ℝ) := by
+            simp [SimpleGraph.lapMatrix, SimpleGraph.degMatrix, Matrix.trace_sub]
+          _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+            exact_mod_cast G.sum_degrees_eq_twice_card_edges
+      calc
+        ((Fintype.card V : ℝ) - 1) * ev second =
+            ∑ _i ∈ (Finset.univ : Finset (Fin (Fintype.card V))).erase last,
+              ev second := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            Finset.card_erase_of_mem (Finset.mem_univ last), Finset.card_univ,
+            Fintype.card_fin, Nat.cast_sub (by omega : 1 ≤ Fintype.card V),
+            Nat.cast_one]
+        _ ≤ ∑ i ∈ (Finset.univ : Finset (Fin (Fintype.card V))).erase last,
+            ev i := Finset.sum_le_sum hpoint
+        _ = ∑ i : Fin (Fintype.card V), ev i :=
+          Finset.sum_erase (Finset.univ : Finset (Fin (Fintype.card V))) hlast
+        _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := htrace
+    · simp only [dif_neg hn, mul_zero]
+      exact mul_nonneg (by norm_num) (Nat.cast_nonneg _)
+  · simp only [if_neg hc, mul_zero]
+    exact mul_nonneg (by norm_num) (Nat.cast_nonneg _)
+theorem hull3d_algebraic_connectivity_le_0_1_min_degree_laplacian_spectral_radius_0_2a2b3957145e {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (letI : Decidable G.Connected := Classical.propDecidable _; if G.Connected then (if h : 2 ≤ Fintype.card V then (G.isHermitian_lapMatrix ℝ).eigenvalues₀ ⟨Fintype.card V - 2, by omega⟩ else (0 : ℝ)) else (0 : ℝ)) ≤ (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_lapMatrix ℝ).eigenvalues)) := by
+  sorry

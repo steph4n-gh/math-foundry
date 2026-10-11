@@ -1,0 +1,555 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem hull_average_degree_le_1_spectral_radius_0_c2374daf0bc7 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ)) ≤ (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) := by
+  classical
+  by_cases hV : Fintype.card V = 0
+  · simp [hV]
+  rw [if_neg hV]
+  let r : ℝ := sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)
+  let b : OrthonormalBasis V ℝ (EuclideanSpace ℝ V) :=
+    (G.isHermitian_adjMatrix ℝ).eigenvectorBasis
+  have hsym : (G.adjMatrix ℝ).toEuclideanLin.IsSymmetric :=
+    Matrix.isSymmetric_toEuclideanLin_iff.mpr (G.isHermitian_adjMatrix ℝ)
+  have heig (i : V) : (G.adjMatrix ℝ).toEuclideanLin (b i) =
+      (G.isHermitian_adjMatrix ℝ).eigenvalues i • b i := by
+    apply WithLp.ofLp_injective 2
+    simpa only [Matrix.toLpLin_apply, WithLp.ofLp_toLp, WithLp.ofLp_smul] using
+      (G.isHermitian_adjMatrix ℝ).mulVec_eigenvectorBasis i
+  have hle (i : V) : (G.isHermitian_adjMatrix ℝ).eigenvalues i ≤ r :=
+    le_csSup (Set.finite_range _).bddAbove ⟨i, rfl⟩
+  have hq (x : EuclideanSpace ℝ V) :
+      inner ℝ ((G.adjMatrix ℝ).toEuclideanLin x) x ≤ r * inner ℝ x x := by
+    calc
+      inner ℝ ((G.adjMatrix ℝ).toEuclideanLin x) x =
+          ∑ i : V, (G.isHermitian_adjMatrix ℝ).eigenvalues i *
+            (inner ℝ x (b i)) ^ 2 := by
+        rw [← b.sum_inner_mul_inner ((G.adjMatrix ℝ).toEuclideanLin x) x]
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hsym x (b i), heig i, inner_smul_right, real_inner_comm x (b i)]
+        ring
+      _ ≤ ∑ i : V, r * (inner ℝ x (b i)) ^ 2 :=
+        Finset.sum_le_sum (fun i _ =>
+          mul_le_mul_of_nonneg_right (hle i) (sq_nonneg _))
+      _ = r * inner ℝ x x := by
+        rw [← Finset.mul_sum]
+        congr 1
+        calc
+          (∑ i : V, (inner ℝ x (b i)) ^ 2) =
+              ∑ i : V, inner ℝ x (b i) * inner ℝ (b i) x := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [real_inner_comm x (b i)]
+            ring
+          _ = inner ℝ x x := b.sum_inner_mul_inner x x
+  let x : EuclideanSpace ℝ V := WithLp.toLp 2 (fun _ : V => (1 : ℝ))
+  have hnorm : inner ℝ x x = (Fintype.card V : ℝ) := by
+    rw [EuclideanSpace.inner_eq_star_dotProduct]
+    simp [x, dotProduct]
+  have hinner : inner ℝ ((G.adjMatrix ℝ).toEuclideanLin x) x =
+      (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+    rw [Matrix.toLpLin_apply, EuclideanSpace.inner_eq_star_dotProduct]
+    simp only [x, WithLp.ofLp_toLp, star_trivial]
+    change (∑ v : V, (1 : ℝ) *
+      Matrix.mulVec (G.adjMatrix ℝ) (fun _ : V => (1 : ℝ)) v) = _
+    simp only [one_mul, SimpleGraph.adjMatrix_mulVec_apply, Finset.sum_const,
+      nsmul_eq_mul, mul_one, SimpleGraph.card_neighborFinset_eq_degree]
+    exact_mod_cast G.sum_degrees_eq_twice_card_edges
+  have hpos : (0 : ℝ) < (Fintype.card V : ℝ) := by
+    exact_mod_cast Nat.pos_of_ne_zero hV
+  apply (div_le_iff₀ hpos).2
+  simpa only [if_neg hV, hinner, hnorm] using hq x
+
+theorem hull_density_le_1_max_degree_0_f5fbcb14104c {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (if Fintype.card V < 2 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / ((Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 1))) ≤ (G.maxDegree : ℝ) := by
+  classical
+  by_cases hn : Fintype.card V < 2
+  · rw [if_pos hn]
+    exact Nat.cast_nonneg _
+  · rw [if_neg hn]
+    have hn2nat : 2 ≤ Fintype.card V := by omega
+    have hn2 : (2 : ℝ) ≤ (Fintype.card V : ℝ) := by
+      exact_mod_cast hn2nat
+    have hsum : 2 * G.edgeFinset.card ≤ Fintype.card V * G.maxDegree := by
+      calc
+        2 * G.edgeFinset.card = Finset.univ.sum (fun v : V => G.degree v) :=
+          G.sum_degrees_eq_twice_card_edges.symm
+        _ ≤ Finset.univ.sum (fun _ : V => G.maxDegree) :=
+          Finset.sum_le_sum (fun v _ => G.degree_le_maxDegree v)
+        _ = Fintype.card V * G.maxDegree := by simp
+    have hsumR : (2 : ℝ) * (G.edgeFinset.card : ℝ) ≤
+        (Fintype.card V : ℝ) * (G.maxDegree : ℝ) := by
+      exact_mod_cast hsum
+    have hnpos : (0 : ℝ) < (Fintype.card V : ℝ) := by linarith
+    have hmpos : (0 : ℝ) < (Fintype.card V : ℝ) - 1 := by linarith
+    have hmone : (1 : ℝ) ≤ (Fintype.card V : ℝ) - 1 := by linarith
+    apply (div_le_iff₀ (mul_pos hnpos hmpos)).2
+    calc
+      (2 : ℝ) * (G.edgeFinset.card : ℝ) ≤
+          (Fintype.card V : ℝ) * (G.maxDegree : ℝ) := hsumR
+      _ ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) *
+          ((Fintype.card V : ℝ) - 1) :=
+        le_mul_of_one_le_right (by positivity) hmone
+      _ = (G.maxDegree : ℝ) *
+          ((Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 1)) := by ring
+
+theorem hull_max_degree_le_0_375_estrada_index_0_1_67202976fe25 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.maxDegree : ℝ) ≤ (((3 / 8 : ℝ) * (∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v))) + (1 / 10 : ℝ)) := by
+  classical
+  cases isEmpty_or_nonempty V with
+  | inl hV =>
+      haveI : IsEmpty V := hV
+      simp <;> norm_num
+  | inr hV =>
+      haveI : Nonempty V := hV
+      let A : Matrix V V ℝ := G.adjMatrix ℝ
+      let hA : A.IsHermitian := G.isHermitian_adjMatrix ℝ
+      let e : V → ℝ := hA.eigenvalues
+      let d : ℝ := G.maxDegree
+      change d ≤ (3 / 8 : ℝ) * (∑ i : V, Real.exp (e i)) + (1 / 10 : ℝ)
+      have hd : 0 ≤ d := Nat.cast_nonneg _
+      have hexp (x : ℝ) :
+          HasSum (fun k : ℕ => x ^ k / (Nat.factorial k : ℝ)) (Real.exp x) := by
+        have hlim : Filter.Tendsto (Complex.exp' (x : ℂ)) Filter.atTop
+            (nhds (Complex.exp (x : ℂ))) := by
+          rw [Complex.exp]
+          apply Metric.tendsto_atTop.2
+          intro ε hε
+          obtain ⟨N, hN⟩ := CauSeq.equiv_lim (Complex.exp' (x : ℂ)) ε hε
+          refine ⟨N, fun n hn => ?_⟩
+          simpa only [dist_eq_norm, CauSeq.sub_apply, CauSeq.const_apply] using hN n hn
+        have hc : HasSum
+            (fun k : ℕ => (x : ℂ) ^ k / (Nat.factorial k : ℂ))
+            (Complex.exp (x : ℂ)) := by
+          have hs := (NormedSpace.expSeries_div_summable (x : ℂ)).hasSum
+          have heq : (∑' k : ℕ, (x : ℂ) ^ k / (Nat.factorial k : ℂ)) =
+              Complex.exp (x : ℂ) :=
+            tendsto_nhds_unique hs.tendsto_sum_nat hlim
+          exact heq ▸ hs
+        simpa only [Complex.reCLM_apply, ← Complex.ofReal_pow,
+          ← Complex.ofReal_natCast, ← Complex.ofReal_div,
+          Complex.ofReal_re, Real.exp] using (Complex.reCLM.hasSum hc)
+      have htrace (k : ℕ) : (A ^ k).trace = ∑ i : V, e i ^ k := by
+        rw [hA.spectral_theorem, ← map_pow, Unitary.conjStarAlgAut_apply,
+          Matrix.trace_mul_cycle, Unitary.coe_star_mul_self, Matrix.one_mul]
+        simp [Matrix.diagonal_pow, e, Function.comp_def]
+      have hnonneg (k : ℕ) (i j : V) : 0 ≤ (A ^ k) i j := by
+        change 0 ≤ (G.adjMatrix ℝ ^ k) i j
+        rw [G.adjMatrix_pow_apply_eq_card_walk k i j]
+        exact Nat.cast_nonneg _
+      have hAnonneg (i j : V) : 0 ≤ A i j := by
+        simpa only [pow_one] using hnonneg 1 i j
+      have ht (k : ℕ) : 0 ≤ (A ^ k).trace := by
+        change 0 ≤ ∑ i : V, (A ^ k) i i
+        exact Finset.sum_nonneg (fun i _ => hnonneg k i i)
+      have hseries : HasSum
+          (fun k : ℕ => (A ^ k).trace / (Nat.factorial k : ℝ))
+          (∑ i : V, Real.exp (e i)) := by
+        have hs : HasSum
+            (fun k : ℕ => ∑ i : V, e i ^ k / (Nat.factorial k : ℝ))
+            (∑ i : V, Real.exp (e i)) := by
+          apply hasSum_sum
+          intro i hi
+          exact hexp (e i)
+        simpa only [← Finset.sum_div, ← htrace] using hs
+      have hEE : (Fintype.card V : ℝ) + (A ^ 2).trace / 2 +
+          (A ^ 4).trace / 24 + (A ^ 6).trace / 720 ≤
+          ∑ i : V, Real.exp (e i) := by
+        have hpartial := sum_le_hasSum ({0, 2, 4, 6} : Finset ℕ)
+          (fun k _ => div_nonneg (ht k) (Nat.cast_nonneg _)) hseries
+        norm_num [Finset.sum_insert] at hpartial
+        simpa only [add_assoc] using hpartial
+      obtain ⟨v, hv⟩ := G.exists_maximal_degree_vertex
+      let N : Finset V := G.neighborFinset v
+      have hnot : v ∉ N := by simp [N]
+      have hdeg : (A ^ 2) v v = d := by
+        change (G.adjMatrix ℝ ^ 2) v v = (G.maxDegree : ℝ)
+        rw [pow_two, G.adjMatrix_mul_self_apply_self, ← hv]
+      have hcenter (k : ℕ) : d ^ k ≤ (A ^ (2 * k)) v v := by
+        induction k with
+        | zero => simp
+        | succ k ih =>
+            change d ^ (k + 1) ≤ (A ^ (2 * (k + 1))) v v
+            have hk : 2 * (k + 1) = 2 * k + 2 := by omega
+            have hpow : A ^ (2 * (k + 1)) = A ^ (2 * k) * A ^ 2 := by
+              rw [hk, pow_add]
+            rw [hpow, Matrix.mul_apply]
+            calc
+              d ^ (k + 1) = d ^ k * d := by rw [pow_succ]
+              _ ≤ (A ^ (2 * k)) v v * (A ^ 2) v v := by
+                rw [hdeg]
+                exact mul_le_mul_of_nonneg_right ih hd
+              _ ≤ ∑ u : V, (A ^ (2 * k)) v u * (A ^ 2) u v :=
+                Finset.single_le_sum
+                  (fun u _ => mul_nonneg (hnonneg (2 * k) v u) (hnonneg 2 u v))
+                  (Finset.mem_univ v)
+      have hmulnonneg (k : ℕ) (i j : V) : 0 ≤ (A * A ^ k) i j := by
+        rw [Matrix.mul_apply]
+        exact Finset.sum_nonneg
+          (fun u _ => mul_nonneg (hAnonneg i u) (hnonneg k u j))
+      have hleaf (k : ℕ) (w : V) (hw : w ∈ N) :
+          d ^ k ≤ (A ^ (2 * (k + 1))) w w := by
+        have hvw : G.Adj v w := (G.mem_neighborFinset v w).mp hw
+        have haw : A w v = 1 := by simp [A, hvw.symm]
+        have hva : A v w = 1 := by simp [A, hvw]
+        have hfactor : A ^ (2 * (k + 1)) = A * A ^ (2 * k) * A := by
+          rw [show 2 * (k + 1) = (1 + 2 * k) + 1 by omega, pow_add, pow_add]
+          simp only [pow_one]
+        have hinner : (A ^ (2 * k)) v v ≤ (A * A ^ (2 * k)) w v := by
+          calc
+            (A ^ (2 * k)) v v = A w v * (A ^ (2 * k)) v v := by
+              rw [haw, one_mul]
+            _ ≤ (A * A ^ (2 * k)) w v := by
+              rw [Matrix.mul_apply]
+              exact Finset.single_le_sum
+                (fun u _ => mul_nonneg (hAnonneg w u) (hnonneg (2 * k) u v))
+                (Finset.mem_univ v)
+        have houter : (A * A ^ (2 * k)) w v ≤ (A * A ^ (2 * k) * A) w w := by
+          calc
+            (A * A ^ (2 * k)) w v = (A * A ^ (2 * k)) w v * A v w := by
+              rw [hva, mul_one]
+            _ ≤ (A * A ^ (2 * k) * A) w w := by
+              rw [Matrix.mul_apply]
+              exact Finset.single_le_sum
+                (fun u _ => mul_nonneg (hmulnonneg (2 * k) w u) (hAnonneg u w))
+                (Finset.mem_univ v)
+        rw [hfactor]
+        exact (hcenter k).trans (hinner.trans houter)
+      have hmoment (k : ℕ) : 2 * d ^ (k + 1) ≤ (A ^ (2 * (k + 1))).trace := by
+        calc
+          2 * d ^ (k + 1) = d ^ (k + 1) + ∑ w ∈ N, d ^ k := by
+            simp only [N, Finset.sum_const, G.card_neighborFinset_eq_degree,
+              nsmul_eq_mul, ← hv]
+            change 2 * d ^ (k + 1) = d ^ (k + 1) + d * d ^ k
+            ring
+          _ ≤ (A ^ (2 * (k + 1))) v v +
+              ∑ w ∈ N, (A ^ (2 * (k + 1))) w w :=
+            add_le_add (hcenter (k + 1))
+              (Finset.sum_le_sum (fun w hw => hleaf k w hw))
+          _ = ∑ w ∈ insert v N, (A ^ (2 * (k + 1))) w w := by
+            rw [Finset.sum_insert hnot]
+          _ ≤ ∑ w : V, (A ^ (2 * (k + 1))) w w :=
+            Finset.sum_le_sum_of_subset_of_nonneg (Finset.subset_univ _)
+              (fun w _ _ => hnonneg (2 * (k + 1)) w w)
+          _ = (A ^ (2 * (k + 1))).trace := rfl
+      have h2 : 2 * d ≤ (A ^ 2).trace := by simpa using hmoment 0
+      have h4 : 2 * d ^ 2 ≤ (A ^ 4).trace := by simpa using hmoment 1
+      have h6 : 2 * d ^ 3 ≤ (A ^ 6).trace := by simpa using hmoment 2
+      have hlower : (Fintype.card V : ℝ) + d + d ^ 2 / 12 + d ^ 3 / 360 ≤
+          ∑ i : V, Real.exp (e i) := by
+        linarith only [hEE, h2, h4, h6]
+      have hnat : G.maxDegree + 1 ≤ Fintype.card V :=
+        Nat.succ_le_of_lt G.maxDegree_lt_card_verts
+      have hn : d + 1 ≤ (Fintype.card V : ℝ) := by
+        change (G.maxDegree : ℝ) + 1 ≤ (Fintype.card V : ℝ)
+        exact_mod_cast hnat
+      have hpoly : 0 ≤ (d - (7 / 2 : ℝ)) ^ 2 * (d + 37) :=
+        mul_nonneg (sq_nonneg _) (by linarith only [hd])
+      nlinarith only [hlower, hn, hd, hpoly]
+
+theorem hull_spectral_radius_le_0_5_size_0_5_bf1d5973d871 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) ≤ (((1 / 2 : ℝ) * (G.edgeFinset.card : ℝ)) + (1 / 2 : ℝ)) := by
+  classical
+  by_cases hn : Fintype.card V = 0
+  · rw [if_pos hn]
+    positivity
+  · rw [if_neg hn]
+    letI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hn)
+    have hpair (v w : V) (hvw : G.Adj v w) :
+        G.degree v + G.degree w ≤ G.edgeFinset.card + 1 := by
+      have hinter : G.incidenceFinset v ∩ G.incidenceFinset w = {s(v, w)} := by
+        apply Finset.coe_injective
+        simpa only [Finset.coe_inter, SimpleGraph.coe_incidenceFinset,
+          Finset.coe_singleton] using G.incidenceSet_inter_incidenceSet_of_adj hvw
+      have hcard := Finset.card_union_add_card_inter
+        (G.incidenceFinset v) (G.incidenceFinset w)
+      simp only [hinter, Finset.card_singleton,
+        SimpleGraph.card_incidenceFinset_eq_degree] at hcard
+      have hunion : (G.incidenceFinset v ∪ G.incidenceFinset w).card ≤
+          G.edgeFinset.card :=
+        Finset.card_le_card (Finset.union_subset
+          (G.incidenceFinset_subset v) (G.incidenceFinset_subset w))
+      omega
+    have hneighbor (v : V) :
+        (∑ w ∈ G.neighborFinset v, (G.degree w : ℝ)) ≤
+          (G.degree v : ℝ) *
+            ((G.edgeFinset.card : ℝ) + 1 - (G.degree v : ℝ)) := by
+      calc
+        _ ≤ ∑ _w ∈ G.neighborFinset v,
+            ((G.edgeFinset.card : ℝ) + 1 - (G.degree v : ℝ)) := by
+          apply Finset.sum_le_sum
+          intro w hw
+          have hp : (G.degree v : ℝ) + (G.degree w : ℝ) ≤
+              (G.edgeFinset.card : ℝ) + 1 := by
+            exact_mod_cast hpair v w ((G.mem_neighborFinset v w).mp hw)
+          linarith only [hp]
+        _ = _ := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            SimpleGraph.card_neighborFinset_eq_degree]
+    refine csSup_le (Set.range_nonempty _) ?_
+    rintro _ ⟨i, rfl⟩
+    let hA := G.isHermitian_adjMatrix ℝ
+    let r : ℝ := hA.eigenvalues i
+    let x : V → ℝ := ⇑(hA.eigenvectorBasis i)
+    change r ≤ (1 / 2 : ℝ) * (G.edgeFinset.card : ℝ) + (1 / 2 : ℝ)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2
+        (hA.eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨w, hw⟩ := Function.ne_iff.mp hx
+    have hw0 : x w ≠ 0 := by
+      simpa only [Pi.zero_apply] using hw
+    obtain ⟨v, _, hmax⟩ :=
+      Finset.exists_max_image (Finset.univ : Finset V)
+        (fun u => |x u|) Finset.univ_nonempty
+    have hpos : 0 < |x v| :=
+      (abs_pos.mpr hw0).trans_le (hmax w (Finset.mem_univ w))
+    have heig (u : V) :
+        (∑ z ∈ G.neighborFinset u, x z) = r * x u := by
+      simpa only [x, r, SimpleGraph.adjMatrix_mulVec_apply,
+        Pi.smul_apply, smul_eq_mul] using
+        congrFun (hA.mulVec_eigenvectorBasis i) u
+    have hdouble : r ^ 2 * x v =
+        ∑ u ∈ G.neighborFinset v, ∑ z ∈ G.neighborFinset u, x z := by
+      calc
+        r ^ 2 * x v = r * (r * x v) := by ring
+        _ = r * (∑ u ∈ G.neighborFinset v, x u) := by rw [heig v]
+        _ = ∑ u ∈ G.neighborFinset v, r * x u := by rw [Finset.mul_sum]
+        _ = _ := by
+          apply Finset.sum_congr rfl
+          intro u hu
+          exact (heig u).symm
+    have hbound : r ^ 2 * |x v| ≤
+        ((G.degree v : ℝ) *
+          ((G.edgeFinset.card : ℝ) + 1 - (G.degree v : ℝ))) * |x v| := by
+      calc
+        r ^ 2 * |x v| = |r ^ 2 * x v| := by
+          rw [abs_mul, abs_of_nonneg (sq_nonneg r)]
+        _ = |∑ u ∈ G.neighborFinset v,
+            ∑ z ∈ G.neighborFinset u, x z| := by rw [hdouble]
+        _ ≤ ∑ u ∈ G.neighborFinset v,
+            |∑ z ∈ G.neighborFinset u, x z| :=
+          Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ u ∈ G.neighborFinset v, (G.degree u : ℝ) * |x v| := by
+          apply Finset.sum_le_sum
+          intro u hu
+          calc
+            |∑ z ∈ G.neighborFinset u, x z| ≤
+                ∑ z ∈ G.neighborFinset u, |x z| :=
+              Finset.abs_sum_le_sum_abs x (G.neighborFinset u)
+            _ ≤ ∑ _z ∈ G.neighborFinset u, |x v| :=
+              Finset.sum_le_sum (fun z _ => hmax z (Finset.mem_univ z))
+            _ = (G.degree u : ℝ) * |x v| := by
+              simp only [Finset.sum_const, nsmul_eq_mul,
+                SimpleGraph.card_neighborFinset_eq_degree]
+        _ = (∑ u ∈ G.neighborFinset v, (G.degree u : ℝ)) * |x v| := by
+          rw [Finset.sum_mul]
+        _ ≤ _ := mul_le_mul_of_nonneg_right (hneighbor v) (abs_nonneg _)
+    have hsquared : r ^ 2 ≤ (G.degree v : ℝ) *
+        ((G.edgeFinset.card : ℝ) + 1 - (G.degree v : ℝ)) :=
+      le_of_mul_le_mul_right hbound hpos
+    have hfinal : r ^ 2 ≤
+        ((1 / 2 : ℝ) * (G.edgeFinset.card : ℝ) + (1 / 2 : ℝ)) ^ 2 := by
+      nlinarith only [hsquared,
+        sq_nonneg ((G.degree v : ℝ) - (((G.edgeFinset.card : ℝ) + 1) / 2))]
+    have hb : (0 : ℝ) ≤
+        (1 / 2 : ℝ) * (G.edgeFinset.card : ℝ) + (1 / 2 : ℝ) := by
+      positivity
+    have habs : |r| ≤
+        (1 / 2 : ℝ) * (G.edgeFinset.card : ℝ) + (1 / 2 : ℝ) :=
+      (sq_le_sq₀ (abs_nonneg r) hb).mp (by simpa only [sq_abs] using hfinal)
+    exact (le_abs_self r).trans habs
+
+theorem hull_spectral_radius_le_1_size_0_0f3ad4f640d7 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) ≤ (G.edgeFinset.card : ℝ) := by
+  classical
+  by_cases hV : Fintype.card V = 0
+  · rw [if_pos hV]
+    exact Nat.cast_nonneg G.edgeFinset.card
+  · rw [if_neg hV]
+    letI : Nonempty V :=
+      Fintype.card_pos_iff.mp (Nat.pos_iff_ne_zero.mpr hV)
+    let hA := G.isHermitian_adjMatrix ℝ
+    refine csSup_le (Set.range_nonempty _) ?_
+    rintro _ ⟨i, rfl⟩
+    let x : V → ℝ := ⇑(hA.eigenvectorBasis i)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2
+        (hA.eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨w, hw⟩ := Function.ne_iff.mp hx
+    have hw0 : x w ≠ 0 := by
+      simpa only [Pi.zero_apply] using hw
+    obtain ⟨v, _, hmax⟩ :=
+      Finset.exists_max_image (Finset.univ : Finset V)
+        (fun u => |x u|) Finset.univ_nonempty
+    have hp : 0 < |x v| :=
+      lt_of_lt_of_le (abs_pos.mpr hw0) (hmax w (Finset.mem_univ w))
+    have heq : (∑ u ∈ G.neighborFinset v, x u) =
+        hA.eigenvalues i * x v := by
+      simpa only [SimpleGraph.adjMatrix_mulVec_apply, Pi.smul_apply,
+        smul_eq_mul] using congrFun (hA.mulVec_eigenvectorBasis i) v
+    have habs : |hA.eigenvalues i| * |x v| ≤
+        (G.degree v : ℝ) * |x v| := by
+      calc
+        |hA.eigenvalues i| * |x v| =
+            |∑ u ∈ G.neighborFinset v, x u| := by
+          rw [heq, abs_mul]
+        _ ≤ ∑ u ∈ G.neighborFinset v, |x u| :=
+          Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ _u ∈ G.neighborFinset v, |x v| :=
+          Finset.sum_le_sum (fun u _ => hmax u (Finset.mem_univ u))
+        _ = (G.degree v : ℝ) * |x v| := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            SimpleGraph.card_neighborFinset_eq_degree]
+    have heigen : hA.eigenvalues i ≤ (G.degree v : ℝ) :=
+      (le_abs_self _).trans (le_of_mul_le_mul_right habs hp)
+    have hdegree : (G.degree v : ℝ) ≤ (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast (G.degree_le_card_edgeFinset v)
+    exact heigen.trans hdegree
+
+theorem hull3d_max_degree_ge_1__1_order_complement_spectral_radius__1_c3ce2e082db9 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.maxDegree : ℝ) ≥ (((Fintype.card V : ℝ) - (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues))) - (1 : ℝ)) := by
+  classical
+  by_cases hzero : Fintype.card V = 0
+  · rw [if_pos hzero, hzero]
+    simpa using
+      (le_trans (show (-1 : ℝ) ≤ 0 by norm_num)
+        (show (0 : ℝ) ≤ (G.maxDegree : ℝ) from Nat.cast_nonneg _))
+  · rw [if_neg hzero]
+    have hnpos : (0 : ℝ) < (Fintype.card V : ℝ) := by
+      exact_mod_cast (Nat.pos_of_ne_zero hzero)
+    let hA : (Gᶜ.adjMatrix ℝ).IsHermitian := Gᶜ.isHermitian_adjMatrix ℝ
+    let r : ℝ := sSup (Set.range hA.eigenvalues)
+    let U : Matrix V V ℝ := hA.eigenvectorUnitary
+    change ((Fintype.card V : ℝ) - r) - 1 ≤ (G.maxDegree : ℝ)
+    have hD : (Matrix.diagonal (fun v : V => r - hA.eigenvalues v)).PosSemidef := by
+      apply Matrix.PosSemidef.diagonal
+      intro v
+      exact sub_nonneg.mpr
+        (le_csSup (Set.finite_range hA.eigenvalues).bddAbove ⟨v, rfl⟩)
+    have hdiag : Matrix.diagonal (fun v : V => r - hA.eigenvalues v) =
+        r • (1 : Matrix V V ℝ) - Matrix.diagonal hA.eigenvalues := by
+      ext i j
+      by_cases hij : i = j <;>
+        simp [Matrix.diagonal, Matrix.one_apply, hij, smul_eq_mul]
+    have hunit : U * Matrix.conjTranspose U = 1 := by
+      simpa only [U, Unitary.coe_star, Matrix.star_eq_conjTranspose] using
+        Unitary.coe_mul_star_self hA.eigenvectorUnitary
+    have hspec : Gᶜ.adjMatrix ℝ =
+        U * Matrix.diagonal hA.eigenvalues * Matrix.conjTranspose U := by
+      simpa [U, Unitary.conjStarAlgAut_apply, Matrix.star_eq_conjTranspose,
+        Function.comp_def] using hA.spectral_theorem
+    have hP : (r • (1 : Matrix V V ℝ) - Gᶜ.adjMatrix ℝ).PosSemidef := by
+      have hp := hD.mul_mul_conjTranspose_same U
+      rw [hdiag, mul_sub, sub_mul, Matrix.mul_smul, Matrix.mul_one,
+        Matrix.smul_mul, hunit, ← hspec] at hp
+      exact hp
+    have hMx : Matrix.mulVec
+        (r • (1 : Matrix V V ℝ) - Gᶜ.adjMatrix ℝ)
+        (fun _ : V => (1 : ℝ)) =
+          fun v => r - (Gᶜ.degree v : ℝ) := by
+      ext v
+      simp [Matrix.sub_mulVec, Matrix.smul_mulVec]
+    have hupper : (∑ v : V, (Gᶜ.degree v : ℝ)) ≤
+        (Fintype.card V : ℝ) * r := by
+      apply sub_nonneg.mp
+      have hq := hP.dotProduct_mulVec_nonneg (fun _ : V => (1 : ℝ))
+      rw [hMx] at hq
+      simpa [dotProduct, Finset.sum_sub_distrib, nsmul_eq_mul] using hq
+    have hdegrees (v : V) :
+        (Fintype.card V : ℝ) - 1 - (G.maxDegree : ℝ) ≤ (Gᶜ.degree v : ℝ) := by
+      have hdeg : G.degree v + Gᶜ.degree v + 1 = Fintype.card V := by
+        rw [G.degree_compl v]
+        have hv := G.degree_lt_card_verts v
+        omega
+      have hdegR : (G.degree v : ℝ) + (Gᶜ.degree v : ℝ) + 1 =
+          (Fintype.card V : ℝ) := by
+        exact_mod_cast hdeg
+      have hmaxR : (G.degree v : ℝ) ≤ (G.maxDegree : ℝ) := by
+        exact_mod_cast (G.degree_le_maxDegree v)
+      linarith only [hdegR, hmaxR]
+    have hlower : (Fintype.card V : ℝ) *
+        ((Fintype.card V : ℝ) - 1 - (G.maxDegree : ℝ)) ≤
+          ∑ v : V, (Gᶜ.degree v : ℝ) := by
+      calc
+        (Fintype.card V : ℝ) *
+            ((Fintype.card V : ℝ) - 1 - (G.maxDegree : ℝ)) =
+            ∑ _ : V, ((Fintype.card V : ℝ) - 1 - (G.maxDegree : ℝ)) := by
+              simp [nsmul_eq_mul] <;> ring
+        _ ≤ ∑ v : V, (Gᶜ.degree v : ℝ) :=
+          Finset.sum_le_sum (fun v _ => hdegrees v)
+    have hbound : (Fintype.card V : ℝ) - 1 - (G.maxDegree : ℝ) ≤ r :=
+      le_of_mul_le_mul_left (hlower.trans hupper) hnpos
+    linarith only [hbound]
+theorem hull_spectral_radius_le_1_max_degree_0_e423c6789900 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) ≤ (G.maxDegree : ℝ) := by
+  classical
+  by_cases hV : Fintype.card V = 0
+  · rw [if_pos hV]
+    exact Nat.cast_nonneg G.maxDegree
+  · rw [if_neg hV]
+    letI : Nonempty V :=
+      Fintype.card_pos_iff.mp (Nat.pos_iff_ne_zero.mpr hV)
+    let hA := G.isHermitian_adjMatrix ℝ
+    refine csSup_le (Set.range_nonempty _) ?_
+    rintro _ ⟨i, rfl⟩
+    let x : V → ℝ := ⇑(hA.eigenvectorBasis i)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2
+        (hA.eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨w, hw⟩ := Function.ne_iff.mp hx
+    have hw0 : x w ≠ 0 := by
+      simpa only [Pi.zero_apply] using hw
+    obtain ⟨v, _, hmax⟩ :=
+      Finset.exists_max_image (Finset.univ : Finset V)
+        (fun u => |x u|) Finset.univ_nonempty
+    have hp : 0 < |x v| :=
+      lt_of_lt_of_le (abs_pos.mpr hw0) (hmax w (Finset.mem_univ w))
+    have heq : (∑ u ∈ G.neighborFinset v, x u) =
+        hA.eigenvalues i * x v := by
+      simpa only [SimpleGraph.adjMatrix_mulVec_apply, Pi.smul_apply,
+        smul_eq_mul] using congrFun (hA.mulVec_eigenvectorBasis i) v
+    have habs : |hA.eigenvalues i| * |x v| ≤
+        (G.degree v : ℝ) * |x v| := by
+      calc
+        |hA.eigenvalues i| * |x v| =
+            |∑ u ∈ G.neighborFinset v, x u| := by
+          rw [heq, abs_mul]
+        _ ≤ ∑ u ∈ G.neighborFinset v, |x u| :=
+          Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ _u ∈ G.neighborFinset v, |x v| :=
+          Finset.sum_le_sum (fun u _ => hmax u (Finset.mem_univ u))
+        _ = (G.degree v : ℝ) * |x v| := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            SimpleGraph.card_neighborFinset_eq_degree]
+    have heigen : hA.eigenvalues i ≤ (G.degree v : ℝ) :=
+      (le_abs_self _).trans (le_of_mul_le_mul_right habs hp)
+    have hdegree : (G.degree v : ℝ) ≤ (G.maxDegree : ℝ) := by
+      exact_mod_cast (G.degree_le_maxDegree v)
+    exact heigen.trans hdegree

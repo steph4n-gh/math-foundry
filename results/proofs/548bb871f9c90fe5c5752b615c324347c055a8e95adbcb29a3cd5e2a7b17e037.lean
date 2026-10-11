@@ -1,0 +1,62 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Tactic
+
+
+
+
+open scoped BigOperators
+theorem hull3d_independence_number_ge_2__1_average_degree_size_0_9f3e4d10bb4b {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Gᶜ.cliqueNum : ℝ) ≥ (((2 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ))) - (G.edgeFinset.card : ℝ)) := by
+  classical
+  have ha0 : (0 : ℝ) ≤ (Gᶜ.cliqueNum : ℝ) := Nat.cast_nonneg _
+  have hm0 : (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) := Nat.cast_nonneg _
+  by_cases hzero : Fintype.card V = 0
+  · simp only [if_pos hzero, mul_zero, zero_sub]
+    linarith only [ha0, hm0]
+  · have hn : 0 < Fintype.card V := Nat.pos_of_ne_zero hzero
+    have hnR : (0 : ℝ) < (Fintype.card V : ℝ) := by
+      exact_mod_cast hn
+    simp only [if_neg hzero]
+    by_cases hlarge : 4 ≤ Fintype.card V
+    · have hlargeR : (4 : ℝ) ≤ (Fintype.card V : ℝ) := by
+        exact_mod_cast hlarge
+      have hdiv : (2 : ℝ) * (2 * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ)) ≤ (G.edgeFinset.card : ℝ) := by
+        rw [← mul_div_assoc]
+        apply (div_le_iff₀ hnR).2
+        nlinarith only [hm0, hlargeR]
+      linarith only [ha0, hdiv]
+    · letI : Nonempty V := Fintype.card_pos_iff.mp hn
+      have ha1 : (1 : ℝ) ≤ (Gᶜ.cliqueNum : ℝ) := by
+        exact_mod_cast (Nat.one_le_iff_ne_zero.mpr (Gᶜ).cliqueNum_ne_zero_of_finite)
+      simp only [SimpleGraph.cliqueNum_compl] at ha0 ha1
+      have he := G.card_edgeFinset_le_card_choose_two
+      have hcases : Fintype.card V = 1 ∨ Fintype.card V = 2 ∨ Fintype.card V = 3 := by
+        omega
+      rcases hcases with h1 | h2 | h3
+      · have hb : G.edgeFinset.card ≤ 0 := by
+          calc
+            G.edgeFinset.card ≤ (Fintype.card V).choose 2 := he
+            _ = 0 := by norm_num [h1, Nat.choose]
+        have hbR : (G.edgeFinset.card : ℝ) ≤ 0 := by
+          exact_mod_cast hb
+        norm_num [h1] <;> linarith only [ha0, hbR]
+      · have hb : G.edgeFinset.card ≤ 1 := by
+          calc
+            G.edgeFinset.card ≤ (Fintype.card V).choose 2 := he
+            _ = 1 := by norm_num [h2, Nat.choose]
+        have hbR : (G.edgeFinset.card : ℝ) ≤ 1 := by
+          exact_mod_cast hb
+        norm_num [h2] <;> linarith only [ha1, hbR]
+      · have hb : G.edgeFinset.card ≤ 3 := by
+          calc
+            G.edgeFinset.card ≤ (Fintype.card V).choose 2 := he
+            _ = 3 := by norm_num [h3, Nat.choose]
+        have hbR : (G.edgeFinset.card : ℝ) ≤ 3 := by
+          exact_mod_cast hb
+        norm_num [h3] <;> linarith only [ha1, hbR]

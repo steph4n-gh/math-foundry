@@ -1,0 +1,212 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem model_e994aba553207072b689 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((Fintype.card V : ℝ) ≥ (19999999 / 10000000 : ℝ)))) :
+    (∑ v : V, Real.exp ((G.isHermitian_adjMatrix ℝ).eigenvalues v)) ≥ (((Fintype.card V : ℝ) + (G.edgeFinset.card : ℝ)) + ((((5 : ℝ) * (G.edgeFinset.card : ℝ)) - ((2 : ℝ) * (Fintype.card V : ℝ))) / (12 : ℝ))) := by
+  classical
+  have hcard : 1 < Fintype.card V := by
+    by_contra hn
+    have hn' : (Fintype.card V : ℝ) ≤ 1 := by
+      exact_mod_cast (le_of_not_gt hn)
+    linarith only [h_guard.2, hn']
+  haveI : Nontrivial V := Fintype.one_lt_card_iff_nontrivial.mp hcard
+  haveI : Nonempty V := h_guard.1.nonempty
+  let A : Matrix V V ℝ := G.adjMatrix ℝ
+  let f : V → ℝ := (G.isHermitian_adjMatrix ℝ).eigenvalues
+  let U : Matrix.unitaryGroup V ℝ :=
+    (G.isHermitian_adjMatrix ℝ).eigenvectorUnitary
+  have hdiag : A = Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U
+      (Matrix.diagonal f) := by
+    simpa [A, f, U, RCLike.ofReal_real_eq_id] using
+      (G.isHermitian_adjMatrix ℝ).spectral_theorem
+  have htrace (k : ℕ) : Matrix.trace (A ^ k) = ∑ w : V, f w ^ k := by
+    rw [hdiag, ← map_pow, Unitary.conjStarAlgAut_apply,
+      Matrix.trace_mul_cycle, Unitary.coe_star_mul_self,
+      Matrix.one_mul, Matrix.diagonal_pow, Matrix.trace_diagonal]
+    simp only [Pi.pow_apply]
+  have hnonneg (k : ℕ) : 0 ≤ Matrix.trace (A ^ k) := by
+    change 0 ≤ ∑ w : V, (G.adjMatrix ℝ ^ k) w w
+    apply Finset.sum_nonneg
+    intro w hw
+    rw [G.adjMatrix_pow_apply_eq_card_walk k w w]
+    exact Nat.cast_nonneg _
+  have hsumdeg : (∑ i : V, (G.degree i : ℝ)) =
+      2 * (G.edgeFinset.card : ℝ) := by
+    exact_mod_cast G.sum_degrees_eq_twice_card_edges
+  have hsecond : Matrix.trace (A ^ 2) = 2 * (G.edgeFinset.card : ℝ) := by
+    calc
+      Matrix.trace (A ^ 2) = ∑ i : V, (G.degree i : ℝ) := by
+        simp only [Matrix.trace, Matrix.diag_apply, A, pow_two,
+          SimpleGraph.adjMatrix_mul_self_apply_self]
+      _ = 2 * (G.edgeFinset.card : ℝ) := hsumdeg
+  let B : Matrix V V ℝ := A ^ 2
+  have hBs : B.IsSymm := by
+    dsimp [B, A]
+    exact (G.isSymm_adjMatrix (α := ℝ)).pow 2
+  have hBdiag (i : V) : B i i = (G.degree i : ℝ) := by
+    simpa only [B, A, pow_two] using
+      (G.adjMatrix_mul_self_apply_self (α := ℝ) i)
+  have hrow (i : V) : (∑ j : V, A i j) = (G.degree i : ℝ) := by
+    have h := SimpleGraph.adjMatrix_mulVec_const_apply
+      (G := G) (α := ℝ) (a := 1) (v := i)
+    change (∑ j : V, A i j * (1 : ℝ)) = (G.degree i : ℝ) * 1 at h
+    simpa only [mul_one] using h
+  have hcol (i : V) : (∑ j : V, A j i) = (G.degree i : ℝ) := by
+    calc
+      (∑ j : V, A j i) = ∑ j : V, A i j := by
+        apply Finset.sum_congr rfl
+        intro j hj
+        exact (G.isSymm_adjMatrix (α := ℝ)).apply i j
+      _ = (G.degree i : ℝ) := hrow i
+  have hsumB : (∑ i : V, ∑ j : V, B i j) =
+      ∑ i : V, (G.degree i : ℝ) ^ 2 := by
+    calc
+      (∑ i : V, ∑ j : V, B i j) =
+          ∑ i : V, ∑ j : V, ∑ k : V, A i k * A k j := by
+        simp only [B, pow_two, Matrix.mul_apply]
+      _ = ∑ i : V, ∑ k : V, ∑ j : V, A i k * A k j := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        exact Finset.sum_comm
+      _ = ∑ k : V, ∑ i : V, ∑ j : V, A i k * A k j :=
+        Finset.sum_comm
+      _ = ∑ k : V, (∑ i : V, A i k) * (∑ j : V, A k j) := by
+        simp only [Finset.sum_mul_sum]
+      _ = ∑ k : V, (G.degree k : ℝ) ^ 2 := by
+        apply Finset.sum_congr rfl
+        intro k hk
+        rw [hcol k, hrow k, pow_two]
+  have hBsq (i j : V) : B i j ≤ B i j ^ 2 := by
+    change (G.adjMatrix ℝ ^ 2) i j ≤ ((G.adjMatrix ℝ ^ 2) i j) ^ 2
+    rw [G.adjMatrix_pow_apply_eq_card_walk 2 i j, pow_two]
+    exact_mod_cast
+      (Nat.le_mul_self (Fintype.card {p : G.Walk i j | p.length = 2}))
+  have hfourRows : Matrix.trace (A ^ 4) = ∑ i : V, ∑ j : V, B i j ^ 2 := by
+    have hp : A ^ 4 = B * B := by
+      change A ^ 4 = A ^ 2 * A ^ 2
+      rw [← pow_add]
+    rw [hp]
+    unfold Matrix.trace
+    apply Finset.sum_congr rfl
+    intro i hi
+    change (∑ j : V, B i j * B j i) = ∑ j : V, B i j ^ 2
+    apply Finset.sum_congr rfl
+    intro j hj
+    rw [hBs.apply i j, pow_two]
+  have hRi (i : V) :
+      (G.degree i : ℝ) ^ 2 - (G.degree i : ℝ) + (∑ j : V, B i j) ≤
+        ∑ j : V, B i j ^ 2 := by
+    have he := Finset.sum_le_sum
+      (fun j (_ : j ∈ Finset.univ.erase i) => hBsq i j)
+    rw [← Finset.add_sum_erase Finset.univ (fun j => B i j)
+        (Finset.mem_univ i),
+      ← Finset.add_sum_erase Finset.univ (fun j => B i j ^ 2)
+        (Finset.mem_univ i), hBdiag i]
+    linarith only [he]
+  have hrows :
+      (∑ i : V, ((G.degree i : ℝ) ^ 2 - (G.degree i : ℝ) +
+        (∑ j : V, B i j))) ≤ ∑ i : V, ∑ j : V, B i j ^ 2 :=
+    Finset.sum_le_sum (fun i _ => hRi i)
+  simp only [Finset.sum_add_distrib, Finset.sum_sub_distrib] at hrows
+  rw [hsumdeg, hsumB, ← hfourRows] at hrows
+  have hd (i : V) : 3 * (G.degree i : ℝ) - 2 ≤ (G.degree i : ℝ) ^ 2 := by
+    have hpos : 0 < G.degree i :=
+      h_guard.1.preconnected.degree_pos_of_nontrivial i
+    by_cases hi : G.degree i = 1
+    · norm_num [hi]
+    · have htwo : (2 : ℝ) ≤ (G.degree i : ℝ) := by
+        exact_mod_cast (show 2 ≤ G.degree i by omega)
+      nlinarith only [htwo, sq_nonneg ((G.degree i : ℝ) - 2)]
+  have hdSum : 6 * (G.edgeFinset.card : ℝ) - 2 * (Fintype.card V : ℝ) ≤
+      ∑ i : V, (G.degree i : ℝ) ^ 2 := by
+    have h : (∑ i : V, (3 * (G.degree i : ℝ) - 2)) ≤
+        ∑ i : V, (G.degree i : ℝ) ^ 2 :=
+      Finset.sum_le_sum (fun i _ => hd i)
+    simp only [Finset.sum_sub_distrib, ← Finset.mul_sum, Finset.sum_const,
+      Finset.card_univ, nsmul_eq_mul, hsumdeg] at h
+    nlinarith only [h]
+  have hfourth : 10 * (G.edgeFinset.card : ℝ) - 4 * (Fintype.card V : ℝ) ≤
+      Matrix.trace (A ^ 4) := by
+    nlinarith only [hdSum, hrows]
+  let c : V → CauSeq ℝ abs := fun w =>
+    Complex.cauSeqRe (Complex.exp' (f w : ℂ))
+  have hc (w : V) (n : ℕ) :
+      c w n = ∑ k ∈ Finset.range n, f w ^ k / (Nat.factorial k : ℝ) := by
+    change (∑ k ∈ Finset.range n,
+      (f w : ℂ) ^ k / (Nat.factorial k : ℂ)).re = _
+    simp only [Complex.re_sum]
+    apply Finset.sum_congr rfl
+    intro k hk
+    rw [← Complex.ofReal_pow, ← Complex.ofReal_natCast,
+      ← Complex.ofReal_div, Complex.ofReal_re]
+  have hclim (w : V) : CauSeq.lim (c w) = Real.exp (f w) := by
+    change CauSeq.lim (Complex.cauSeqRe (Complex.exp' (f w : ℂ))) = _
+    rw [Complex.lim_re, Real.exp, Complex.exp]
+  have happly (s : Finset V) (n : ℕ) :
+      (∑ w ∈ s, c w) n = ∑ w ∈ s, c w n := by
+    induction s using Finset.induction_on with
+    | empty => simp
+    | @insert w s hws ih =>
+      simp only [Finset.sum_insert hws, CauSeq.add_apply, ih]
+  have hlim (s : Finset V) :
+      CauSeq.lim (∑ w ∈ s, c w) = ∑ w ∈ s, CauSeq.lim (c w) := by
+    induction s using Finset.induction_on with
+    | empty => simpa using (CauSeq.lim_const (abv := abs) (0 : ℝ))
+    | @insert w s hws ih =>
+      rw [Finset.sum_insert hws, Finset.sum_insert hws, ← CauSeq.lim_add, ih]
+  have hlimsum : CauSeq.lim (∑ w : V, c w) = ∑ w : V, Real.exp (f w) := by
+    rw [hlim]
+    exact Finset.sum_congr rfl (fun w _ => hclim w)
+  let t : ℕ → ℝ := fun k => Matrix.trace (A ^ k) / (Nat.factorial k : ℝ)
+  have ht (k : ℕ) : 0 ≤ t k :=
+    div_nonneg (hnonneg k) (Nat.cast_nonneg _)
+  have hpartial (n : ℕ) :
+      (∑ w : V, c w) n = ∑ k ∈ Finset.range n, t k := by
+    rw [happly]
+    simp_rw [hc]
+    rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl
+    intro k hk
+    change (∑ w : V, f w ^ k / (Nat.factorial k : ℝ)) =
+      Matrix.trace (A ^ k) / (Nat.factorial k : ℝ)
+    rw [← Finset.sum_div, htrace]
+  have hlow : (∑ k ∈ Finset.range 5, t k) ≤ CauSeq.lim (∑ w : V, c w) := by
+    apply CauSeq.le_lim
+    apply CauSeq.le_of_exists
+    refine ⟨5, fun n hn => ?_⟩
+    rw [CauSeq.const_apply, hpartial]
+    exact Finset.sum_le_sum_of_subset_of_nonneg (Finset.range_mono hn)
+      (fun k _ _ => ht k)
+  have ht0 : t 0 = (Fintype.card V : ℝ) := by simp [t]
+  have ht1 : t 1 = 0 := by simp [t, A]
+  have ht2 : t 2 = (G.edgeFinset.card : ℝ) := by
+    norm_num [t, hsecond] <;> ring
+  have ht4 : t 4 = Matrix.trace (A ^ 4) / 24 := by norm_num [t]
+  have hfive : (∑ k ∈ Finset.range 5, t k) =
+      t 0 + t 1 + t 2 + t 3 + t 4 := by
+    simp only [Finset.sum_range_succ, Finset.sum_range_zero, zero_add]
+  rw [hfive, ht0, ht1, ht2, ht4, hlimsum] at hlow
+  change (Fintype.card V : ℝ) + (G.edgeFinset.card : ℝ) +
+    (5 * (G.edgeFinset.card : ℝ) - 2 * (Fintype.card V : ℝ)) / 12 ≤
+      ∑ w : V, Real.exp (f w)
+  nlinarith only [hlow, hfourth, ht 3]

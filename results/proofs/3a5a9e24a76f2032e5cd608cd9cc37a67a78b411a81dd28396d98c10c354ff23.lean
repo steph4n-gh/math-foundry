@@ -1,0 +1,352 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem hull_spectral_radius_le_1_size_0_0f3ad4f640d7 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) ≤ (G.edgeFinset.card : ℝ) := by
+  classical
+  by_cases hV : Fintype.card V = 0
+  · rw [if_pos hV]
+    exact Nat.cast_nonneg G.edgeFinset.card
+  · rw [if_neg hV]
+    letI : Nonempty V :=
+      Fintype.card_pos_iff.mp (Nat.pos_iff_ne_zero.mpr hV)
+    let hA := G.isHermitian_adjMatrix ℝ
+    refine csSup_le (Set.range_nonempty _) ?_
+    rintro _ ⟨i, rfl⟩
+    let x : V → ℝ := ⇑(hA.eigenvectorBasis i)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2
+        (hA.eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨w, hw⟩ := Function.ne_iff.mp hx
+    have hw0 : x w ≠ 0 := by
+      simpa only [Pi.zero_apply] using hw
+    obtain ⟨v, _, hmax⟩ :=
+      Finset.exists_max_image (Finset.univ : Finset V)
+        (fun u => |x u|) Finset.univ_nonempty
+    have hp : 0 < |x v| :=
+      lt_of_lt_of_le (abs_pos.mpr hw0) (hmax w (Finset.mem_univ w))
+    have heq : (∑ u ∈ G.neighborFinset v, x u) =
+        hA.eigenvalues i * x v := by
+      simpa only [SimpleGraph.adjMatrix_mulVec_apply, Pi.smul_apply,
+        smul_eq_mul] using congrFun (hA.mulVec_eigenvectorBasis i) v
+    have habs : |hA.eigenvalues i| * |x v| ≤
+        (G.degree v : ℝ) * |x v| := by
+      calc
+        |hA.eigenvalues i| * |x v| =
+            |∑ u ∈ G.neighborFinset v, x u| := by
+          rw [heq, abs_mul]
+        _ ≤ ∑ u ∈ G.neighborFinset v, |x u| :=
+          Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ _u ∈ G.neighborFinset v, |x v| :=
+          Finset.sum_le_sum (fun u _ => hmax u (Finset.mem_univ u))
+        _ = (G.degree v : ℝ) * |x v| := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            SimpleGraph.card_neighborFinset_eq_degree]
+    have heigen : hA.eigenvalues i ≤ (G.degree v : ℝ) :=
+      (le_abs_self _).trans (le_of_mul_le_mul_right habs hp)
+    have hdegree : (G.degree v : ℝ) ≤ (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast (G.degree_le_card_edgeFinset v)
+    exact heigen.trans hdegree
+
+theorem model_8ce30216566f34c2605a {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.edgeFinset.card : ℝ) ≤ (((Fintype.card V : ℝ) - (Gᶜ.cliqueNum : ℝ)) * (G.maxDegree : ℝ)) := by
+  classical
+    obtain ⟨s, hs⟩ := (Gᶜ).exists_isNClique_cliqueNum
+    let t : Finset V := Finset.univ \ s
+    have hcover : G.edgeFinset ⊆ t.biUnion (fun v => G.incidenceFinset v) := by
+      intro e
+      refine Sym2.inductionOn e ?_
+      intro v w he
+      have hadj : G.Adj v w := by
+        simpa only [SimpleGraph.mem_edgeFinset, SimpleGraph.mem_edgeSet] using he
+      by_cases hv : v ∈ s
+      · have hw : w ∉ s := by
+          intro hw
+          exact ((SimpleGraph.compl_adj G v w).mp (hs.isClique hv hw hadj.ne)).2 hadj
+        refine Finset.mem_biUnion.mpr ⟨w, ?_, ?_⟩
+        · simp [t, hw]
+        · simpa only [SimpleGraph.mem_incidenceFinset,
+            SimpleGraph.mk'_mem_incidenceSet_right_iff] using hadj
+      · refine Finset.mem_biUnion.mpr ⟨v, ?_, ?_⟩
+        · simp [t, hv]
+        · simpa only [SimpleGraph.mem_incidenceFinset,
+            SimpleGraph.mk'_mem_incidenceSet_left_iff] using hadj
+    have hn : G.edgeFinset.card ≤ t.card * G.maxDegree := by
+      calc
+        G.edgeFinset.card ≤ (t.biUnion (fun v => G.incidenceFinset v)).card :=
+          Finset.card_le_card hcover
+        _ ≤ ∑ v ∈ t, (G.incidenceFinset v).card := Finset.card_biUnion_le
+        _ = ∑ v ∈ t, G.degree v := by
+          simp only [G.card_incidenceFinset_eq_degree]
+        _ ≤ ∑ _v ∈ t, G.maxDegree :=
+          Finset.sum_le_sum fun v _ => G.degree_le_maxDegree v
+        _ = t.card * G.maxDegree := by simp
+    have hcard : t.card + Gᶜ.cliqueNum = Fintype.card V := by
+      simpa only [t, hs.card_eq, Finset.card_univ] using
+        Finset.card_sdiff_add_card_eq_card (Finset.subset_univ s)
+    have hcard_real : (t.card : ℝ) + (Gᶜ.cliqueNum : ℝ) = (Fintype.card V : ℝ) := by
+      exact_mod_cast hcard
+    have ht : (t.card : ℝ) = (Fintype.card V : ℝ) - (Gᶜ.cliqueNum : ℝ) := by
+      linarith
+    have hbound : (G.edgeFinset.card : ℝ) ≤ (t.card : ℝ) * (G.maxDegree : ℝ) := by
+      exact_mod_cast hn
+    rw [ht] at hbound
+    exact hbound
+
+theorem hull3d_max_degree_le_1_0_size_chromatic_number_0_is_bipartite_19bc4d43570a {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Colorable 2)) :
+    (G.maxDegree : ℝ) ≤ (G.edgeFinset.card : ℝ) := by
+  have h : G.maxDegree ≤ G.edgeFinset.card :=
+    G.maxDegree_le_of_forall_degree_le _ (fun v => G.degree_le_card_edgeFinset v)
+  exact_mod_cast h
+
+theorem hull3d_size_ge_0_1_nordhaus_gaddum_spectral_product_spectral_radius_0_is_bipartite_fd5d8dffd858 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Colorable 2)) :
+    (G.edgeFinset.card : ℝ) ≥ (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) := by
+  classical
+  by_cases hV : Fintype.card V = 0
+  · rw [if_pos hV]
+    exact Nat.cast_nonneg _
+  · rw [if_neg hV]
+    letI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hV)
+    apply csSup_le (Set.range_nonempty _)
+    rintro r ⟨i, rfl⟩
+    let x : V → ℝ := ⇑((G.isHermitian_adjMatrix ℝ).eigenvectorBasis i)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2
+        ((G.isHermitian_adjMatrix ℝ).eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨v, _, hsup⟩ :=
+      Finset.exists_mem_eq_sup' Finset.univ_nonempty (fun w : V => |x w|)
+    have hmax (w : V) : |x w| ≤ |x v| := by
+      rw [← hsup]
+      exact Finset.le_sup' (fun w : V => |x w|) (Finset.mem_univ w)
+    have hxv : x v ≠ 0 := by
+      intro hzero
+      apply hx
+      funext w
+      apply abs_eq_zero.mp
+      apply le_antisymm
+      · simpa only [hzero, abs_zero] using hmax w
+      · exact abs_nonneg _
+    have hp : 0 < |x v| := abs_pos.mpr hxv
+    have hrow : (∑ w ∈ G.neighborFinset v, x w) =
+        (G.isHermitian_adjMatrix ℝ).eigenvalues i * x v := by
+      simpa only [SimpleGraph.adjMatrix_mulVec_apply, Pi.smul_apply, smul_eq_mul]
+        using congrFun ((G.isHermitian_adjMatrix ℝ).mulVec_eigenvectorBasis i) v
+    have hprod : |(G.isHermitian_adjMatrix ℝ).eigenvalues i| * |x v| ≤
+        (G.degree v : ℝ) * |x v| := by
+      calc
+        _ = |∑ w ∈ G.neighborFinset v, x w| := by rw [hrow, abs_mul]
+        _ ≤ ∑ w ∈ G.neighborFinset v, |x w| :=
+          Finset.abs_sum_le_sum_abs x _
+        _ ≤ ∑ _w ∈ G.neighborFinset v, |x v| :=
+          Finset.sum_le_sum (fun w _ => hmax w)
+        _ = (G.degree v : ℝ) * |x v| := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            SimpleGraph.card_neighborFinset_eq_degree]
+    have habs : |(G.isHermitian_adjMatrix ℝ).eigenvalues i| ≤ (G.degree v : ℝ) :=
+      le_of_mul_le_mul_right hprod hp
+    have hdeg : (G.degree v : ℝ) ≤ (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast G.degree_le_card_edgeFinset v
+    exact (le_abs_self _).trans (habs.trans hdeg)
+
+theorem hull3d_size_ge_0_5_5_nordhaus_gaddum_spectral_product_spectral_radius__7_6_is_bipartite_c239cbde8507 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Colorable 2)) :
+    (G.edgeFinset.card : ℝ) ≥ (((11 / 2 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues))) - (38 / 5 : ℝ)) := by
+  classical
+  by_cases hn : Fintype.card V = 0
+  · rw [if_pos hn]
+    have hm : (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) := Nat.cast_nonneg _
+    nlinarith only [hm]
+  · letI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hn)
+    rw [if_neg hn]
+    obtain ⟨S, T, hST⟩ := SimpleGraph.IsBipartite.exists_isBipartiteWith h_guard
+    let s : Finset V := S.toFinset
+    let t : Finset V := T.toFinset
+    have hpart : G.IsBipartiteWith (s : Set V) (t : Set V) := by
+      simpa only [s, t, Set.coe_toFinset] using hST
+    have hneighbor (v : V) :
+        (∑ w ∈ G.neighborFinset v, G.degree w) ≤ G.edgeFinset.card := by
+      by_cases hv : v ∈ s
+      · calc
+          _ ≤ ∑ w ∈ t, G.degree w :=
+            Finset.sum_le_sum_of_subset_of_nonneg
+              (SimpleGraph.isBipartiteWith_neighborFinset_subset hpart hv)
+              (fun _ _ _ => Nat.zero_le _)
+          _ = G.edgeFinset.card :=
+            SimpleGraph.isBipartiteWith_sum_degrees_eq_card_edges' hpart
+      · by_cases hv' : v ∈ t
+        · calc
+            _ ≤ ∑ w ∈ s, G.degree w :=
+              Finset.sum_le_sum_of_subset_of_nonneg
+                (SimpleGraph.isBipartiteWith_neighborFinset_subset' hpart hv')
+                (fun _ _ _ => Nat.zero_le _)
+            _ = G.edgeFinset.card :=
+              SimpleGraph.isBipartiteWith_sum_degrees_eq_card_edges hpart
+        · have hempty : G.neighborFinset v = ∅ := by
+            apply Finset.eq_empty_iff_forall_notMem.mpr
+            intro w hw
+            have hadj : G.Adj v w := (G.mem_neighborFinset v w).mp hw
+            rcases hpart.mem_of_adj hadj with h | h
+            · exact hv h.1
+            · exact hv' h.1
+          simp [hempty]
+    have heigen (i : V) :
+        (G.isHermitian_adjMatrix ℝ).eigenvalues i ≤
+          (2 / 11 : ℝ) * ((G.edgeFinset.card : ℝ) + (38 / 5 : ℝ)) := by
+      let r : ℝ := (G.isHermitian_adjMatrix ℝ).eigenvalues i
+      let x : V → ℝ := ⇑((G.isHermitian_adjMatrix ℝ).eigenvectorBasis i)
+      change r ≤ (2 / 11 : ℝ) * ((G.edgeFinset.card : ℝ) + (38 / 5 : ℝ))
+      have hx0 : x ≠ 0 := by
+        intro hx
+        apply (G.isHermitian_adjMatrix ℝ).eigenvectorBasis.orthonormal.ne_zero i
+        apply PiLp.ext
+        intro v
+        exact congrFun hx v
+      obtain ⟨u, hu⟩ : ∃ u : V, x u ≠ 0 := by
+        by_contra h
+        apply hx0
+        funext u
+        by_contra hu
+        exact h ⟨u, hu⟩
+      obtain ⟨v, hv, hvmax⟩ :=
+        Finset.exists_max_image (Finset.univ : Finset V)
+          (fun w => |x w|) Finset.univ_nonempty
+      have hpos : 0 < |x v| :=
+        (abs_pos.mpr hu).trans_le (hvmax u (Finset.mem_univ u))
+      have heig (w : V) :
+          (∑ z ∈ G.neighborFinset w, x z) = r * x w := by
+        simpa only [x, r, SimpleGraph.adjMatrix_mulVec_apply,
+          Pi.smul_apply, smul_eq_mul] using
+          congrFun ((G.isHermitian_adjMatrix ℝ).mulVec_eigenvectorBasis i) w
+      have hsquare_vec :
+          r ^ 2 * x v =
+            ∑ w ∈ G.neighborFinset v, ∑ z ∈ G.neighborFinset w, x z := by
+        calc
+          r ^ 2 * x v = r * (r * x v) := by ring
+          _ = r * (∑ w ∈ G.neighborFinset v, x w) := by rw [heig v]
+          _ = ∑ w ∈ G.neighborFinset v, r * x w := by rw [Finset.mul_sum]
+          _ = ∑ w ∈ G.neighborFinset v, ∑ z ∈ G.neighborFinset w, x z := by
+            apply Finset.sum_congr rfl
+            intro w hw
+            exact (heig w).symm
+      have hbound : r ^ 2 * |x v| ≤ (G.edgeFinset.card : ℝ) * |x v| := by
+        calc
+          r ^ 2 * |x v| = |r ^ 2 * x v| := by
+            rw [abs_mul, abs_of_nonneg (sq_nonneg r)]
+          _ = |∑ w ∈ G.neighborFinset v, ∑ z ∈ G.neighborFinset w, x z| := by
+            rw [hsquare_vec]
+          _ ≤ ∑ w ∈ G.neighborFinset v,
+              |∑ z ∈ G.neighborFinset w, x z| :=
+            Finset.abs_sum_le_sum_abs _ _
+          _ ≤ ∑ w ∈ G.neighborFinset v, (G.degree w : ℝ) * |x v| := by
+            apply Finset.sum_le_sum
+            intro w hw
+            calc
+              |∑ z ∈ G.neighborFinset w, x z| ≤
+                  ∑ z ∈ G.neighborFinset w, |x z| :=
+                Finset.abs_sum_le_sum_abs x (G.neighborFinset w)
+              _ ≤ ∑ _z ∈ G.neighborFinset w, |x v| :=
+                Finset.sum_le_sum (fun z _ => hvmax z (Finset.mem_univ z))
+              _ = (G.degree w : ℝ) * |x v| := by
+                simp only [Finset.sum_const, nsmul_eq_mul,
+                  SimpleGraph.card_neighborFinset_eq_degree]
+          _ = (∑ w ∈ G.neighborFinset v, (G.degree w : ℝ)) * |x v| := by
+            rw [Finset.sum_mul]
+          _ ≤ (G.edgeFinset.card : ℝ) * |x v| := by
+            apply mul_le_mul_of_nonneg_right ?_ (abs_nonneg _)
+            exact_mod_cast (hneighbor v)
+      have hsquare : r ^ 2 ≤ (G.edgeFinset.card : ℝ) :=
+        le_of_mul_le_mul_right hbound hpos
+      nlinarith only [hsquare, sq_nonneg (r - (11 / 4 : ℝ))]
+    have hsup :
+        sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues) ≤
+          (2 / 11 : ℝ) * ((G.edgeFinset.card : ℝ) + (38 / 5 : ℝ)) := by
+      apply csSup_le (Set.range_nonempty _)
+      rintro _ ⟨i, rfl⟩
+      exact heigen i
+    linarith only [hsup]
+
+theorem hull3d_size_ge_1_0_max_degree_normalized_laplacian_spectral_gap_0_is_connected_9b83028c151a {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Connected)) :
+    (G.edgeFinset.card : ℝ) ≥ (G.maxDegree : ℝ) := by
+  classical
+  have hn : G.maxDegree ≤ G.edgeFinset.card :=
+    G.maxDegree_le_of_forall_degree_le G.edgeFinset.card
+      (fun v => G.degree_le_card_edgeFinset v)
+  exact_mod_cast hn
+theorem hull3d_size_ge_0_5_0_spectral_spread_independence_number_0_is_regular_37cf8d66157a {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((∃ d : ℕ, G.IsRegularOfDegree d))) :
+    (G.edgeFinset.card : ℝ) ≥ ((1 / 2 : ℝ) * ((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) - (if Fintype.card V = 0 then (0 : ℝ) else sInf (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)))) := by
+  classical
+  by_cases hV : Fintype.card V = 0
+  · simpa only [if_pos hV, sub_self, mul_zero] using
+      (Nat.cast_nonneg G.edgeFinset.card : (0 : ℝ) ≤ (G.edgeFinset.card : ℝ))
+  · simp only [if_neg hV]
+    letI : Nonempty V :=
+      Fintype.card_pos_iff.mp (Nat.pos_iff_ne_zero.mpr hV)
+    let hA := G.isHermitian_adjMatrix ℝ
+    have heigen (i : V) : |hA.eigenvalues i| ≤ (G.edgeFinset.card : ℝ) := by
+      let x : V → ℝ := ⇑(hA.eigenvectorBasis i)
+      have hx : x ≠ 0 :=
+        (WithLp.ofLp_eq_zero 2).ne.2
+          (hA.eigenvectorBasis.orthonormal.ne_zero i)
+      obtain ⟨w, hw⟩ := Function.ne_iff.mp hx
+      have hw0 : x w ≠ 0 := by
+        simpa only [Pi.zero_apply] using hw
+      obtain ⟨v, _, hmax⟩ :=
+        Finset.exists_max_image (Finset.univ : Finset V)
+          (fun u => |x u|) Finset.univ_nonempty
+      have hp : 0 < |x v| :=
+        lt_of_lt_of_le (abs_pos.mpr hw0) (hmax w (Finset.mem_univ w))
+      have heq : (∑ u ∈ G.neighborFinset v, x u) =
+          hA.eigenvalues i * x v := by
+        simpa only [SimpleGraph.adjMatrix_mulVec_apply, Pi.smul_apply,
+          smul_eq_mul] using congrFun (hA.mulVec_eigenvectorBasis i) v
+      have habs : |hA.eigenvalues i| * |x v| ≤
+          (G.degree v : ℝ) * |x v| := by
+        calc
+          |hA.eigenvalues i| * |x v| =
+              |∑ u ∈ G.neighborFinset v, x u| := by
+            rw [heq, abs_mul]
+          _ ≤ ∑ u ∈ G.neighborFinset v, |x u| :=
+            Finset.abs_sum_le_sum_abs _ _
+          _ ≤ ∑ _u ∈ G.neighborFinset v, |x v| :=
+            Finset.sum_le_sum (fun u _ => hmax u (Finset.mem_univ u))
+          _ = (G.degree v : ℝ) * |x v| := by
+            simp only [Finset.sum_const, nsmul_eq_mul,
+              SimpleGraph.card_neighborFinset_eq_degree]
+      have hdegree : (G.degree v : ℝ) ≤ (G.edgeFinset.card : ℝ) := by
+        exact_mod_cast (G.degree_le_card_edgeFinset v)
+      exact (le_of_mul_le_mul_right habs hp).trans hdegree
+    have hsup : sSup (Set.range hA.eigenvalues) ≤ (G.edgeFinset.card : ℝ) := by
+      refine csSup_le (Set.range_nonempty _) ?_
+      rintro _ ⟨i, rfl⟩
+      exact (abs_le.mp (heigen i)).2
+    have hinf : -(G.edgeFinset.card : ℝ) ≤ sInf (Set.range hA.eigenvalues) := by
+      refine le_csInf (Set.range_nonempty _) ?_
+      rintro _ ⟨i, rfl⟩
+      exact (abs_le.mp (heigen i)).1
+    change (G.edgeFinset.card : ℝ) ≥
+      (1 / 2 : ℝ) * (sSup (Set.range hA.eigenvalues) - sInf (Set.range hA.eigenvalues))
+    linarith only [hsup, hinf]

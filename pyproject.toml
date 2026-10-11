@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "math-foundry"
+version = "1.0.0rc1"
+description = "Graph conjecture search with replayable refutations and checked Lean proof reuse"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11"
+dependencies = [
+    "networkx>=3.0",
+    "numpy>=1.24.0",
+    "z3-solver>=4.12.0",
+    "sympy>=1.12",
+    "pydantic>=2.0.0",
+    "scipy>=1.10",
+    "pandas>=2.0",
+    "jinja2>=3.1.2",
+    "pypdf>=5.0",
+]
+
+[project.urls]
+Repository = "https://github.com/steph4n-gh/math-foundry"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-cov"]
+
+[project.scripts]
+math-foundry = "run_research:main"
+math-foundry-dashboard = "dashboard:main"
+math-foundry-review = "review_novelty:main"
+math-foundry-export = "autonomous_math.export.research_packet:main"
+math-foundry-qualify = "qualify_release:main"
+
+[tool.setuptools]
+py-modules = ["run_research", "dashboard", "review_novelty", "evaluate_self_improvement", "evaluate_generative", "qualify_release", "evaluate_review_feedback", "evaluate_literature_guidance"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["autonomous_math*", "spectral_pruning*"]
+exclude = ["tests*", "spectral_pruning.dimacs_data*"]
+
+[tool.setuptools.package-data]
+"autonomous_math.dashboard" = ["static/*.html", "static/*.css", "static/*.js"]
+"spectral_pruning" = ["dimacs_data/provenance.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,607 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem model_081bc55d24f66b98c45d {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ^ 2) ≤ ((2 : ℝ) * ((Fintype.card V : ℝ) * (G.edgeFinset.card : ℝ))) := by
+  classical
+    let hA := G.isHermitian_adjMatrix ℝ
+    let D : Matrix V V ℝ := Matrix.diagonal hA.eigenvalues
+    let U := hA.eigenvectorUnitary
+    have hspec : G.adjMatrix ℝ =
+        Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U D := by
+      simpa [D, U] using hA.spectral_theorem
+    have htrace : Matrix.trace (G.adjMatrix ℝ * G.adjMatrix ℝ) =
+        ∑ v : V, hA.eigenvalues v ^ 2 := by
+      calc
+        Matrix.trace (G.adjMatrix ℝ * G.adjMatrix ℝ) =
+            Matrix.trace (Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U (D * D)) := by
+          rw [map_mul, ← hspec]
+        _ = Matrix.trace (D * D) := by
+          rw [Unitary.conjStarAlgAut_apply, Matrix.trace_mul_cycle,
+            Unitary.coe_star_mul_self, one_mul]
+        _ = ∑ v : V, hA.eigenvalues v ^ 2 := by
+          simp [D, Matrix.diagonal_mul_diagonal, pow_two]
+    have hsquares : (∑ v : V, hA.eigenvalues v ^ 2) =
+        (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+      rw [← htrace]
+      calc
+        Matrix.trace (G.adjMatrix ℝ * G.adjMatrix ℝ) =
+            ∑ v : V, (G.degree v : ℝ) := by
+          simp only [Matrix.trace, Matrix.diag_apply,
+            G.adjMatrix_mul_self_apply_self]
+        _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+          exact_mod_cast G.sum_degrees_eq_twice_card_edges
+    have hCS : (∑ v : V, |hA.eigenvalues v|) ^ 2 ≤
+        (Fintype.card V : ℝ) * ∑ v : V, hA.eigenvalues v ^ 2 := by
+      simpa only [one_mul, one_pow, Finset.sum_const, Finset.card_univ,
+        nsmul_eq_mul, mul_one, sq_abs] using
+        (Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
+          (fun _ : V => (1 : ℝ)) (fun v => |hA.eigenvalues v|))
+    rw [hsquares] at hCS
+    calc
+      _ ≤ (Fintype.card V : ℝ) * ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := hCS
+      _ = _ := by ring
+
+theorem mcclelland_graph_energy_upper {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ (Real.sqrt ((2 : ℝ) * ((G.edgeFinset.card : ℝ) * (Fintype.card V : ℝ)))) := by
+  classical
+  have hsq :
+      (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ^ 2 ≤
+        (2 : ℝ) * ((G.edgeFinset.card : ℝ) * (Fintype.card V : ℝ)) := by
+    calc
+      _ ≤ (2 : ℝ) * ((Fintype.card V : ℝ) * (G.edgeFinset.card : ℝ)) :=
+        model_081bc55d24f66b98c45d G
+      _ = _ := by ring
+  calc
+    _ ≤ |(∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|)| :=
+      le_abs_self _
+    _ = Real.sqrt ((∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ^ 2) :=
+      (Real.sqrt_sq_eq_abs _).symm
+    _ ≤ _ := Real.sqrt_le_sqrt hsq
+
+theorem gutman_energy_size_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+  let b := (G.isHermitian_adjMatrix ℝ).eigenvectorBasis
+  let x : V → V → ℝ := fun i v => b i v
+  have hsq (v : V) : (∑ i : V, x i v ^ 2) = 1 := by
+    simpa only [x, EuclideanSpace.basisFun_inner,
+      (EuclideanSpace.basisFun V ℝ).orthonormal.1 v, one_pow] using
+      b.sum_sq_inner_left ((EuclideanSpace.basisFun V ℝ) v)
+  have heig (i : V) :
+      (G.isHermitian_adjMatrix ℝ).eigenvalues i =
+        ∑ u : V, ∑ v : V, if G.Adj u v then x i u * x i v else 0 := by
+    simpa only [RCLike.re_to_real, dotProduct, Pi.star_apply, star_trivial,
+      Matrix.mulVec_apply_eq_sum, SimpleGraph.adjMatrix_apply, ite_mul,
+      one_mul, zero_mul, Finset.mul_sum, mul_ite, mul_zero, x, b] using
+      (G.isHermitian_adjMatrix ℝ).eigenvalues_eq i
+  have hbound (i : V) :
+      |(G.isHermitian_adjMatrix ℝ).eigenvalues i| ≤
+        ∑ u : V, ∑ v : V,
+          if G.Adj u v then (x i u ^ 2 + x i v ^ 2) / 2 else 0 := by
+    rw [heig i]
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    refine Finset.sum_le_sum fun u _ => ?_
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    refine Finset.sum_le_sum fun v _ => ?_
+    by_cases huv : G.Adj u v
+    · simp only [if_pos huv, abs_mul]
+      have h := two_mul_le_add_sq |x i u| |x i v|
+      simp only [sq_abs] at h
+      linarith only [h]
+    · simp [huv]
+  calc
+    (∑ i : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues i|) ≤
+        ∑ i : V, ∑ u : V, ∑ v : V,
+          if G.Adj u v then (x i u ^ 2 + x i v ^ 2) / 2 else 0 :=
+      Finset.sum_le_sum (fun i _ => hbound i)
+    _ = ∑ u : V, ∑ v : V, ∑ i : V,
+          if G.Adj u v then (x i u ^ 2 + x i v ^ 2) / 2 else 0 := by
+      rw [Finset.sum_comm]
+      apply Finset.sum_congr rfl
+      intro u hu
+      rw [Finset.sum_comm]
+    _ = ∑ u : V, ∑ v : V, if G.Adj u v then (1 : ℝ) else 0 := by
+      apply Finset.sum_congr rfl
+      intro u hu
+      apply Finset.sum_congr rfl
+      intro v hv
+      by_cases huv : G.Adj u v
+      · simp only [if_pos huv]
+        rw [← Finset.sum_div, Finset.sum_add_distrib, hsq u, hsq v]
+        norm_num
+      · simp only [if_neg huv, Finset.sum_const_zero]
+    _ = ∑ u : V, (G.degree u : ℝ) := by
+      apply Finset.sum_congr rfl
+      intro u hu
+      exact (G.degree_eq_sum_if_adj u).symm
+    _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast G.sum_degrees_eq_twice_card_edges
+
+theorem koolen_moulton_order_2003 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ (((Fintype.card V : ℝ) / (2 : ℝ)) * ((1 : ℝ) + (Real.sqrt (Fintype.card V : ℝ)))) := by
+  classical
+  let A : Matrix V V ℝ := G.adjMatrix ℝ
+  let hA : A.IsHermitian := G.isHermitian_adjMatrix ℝ
+  let f : V → ℝ := hA.eigenvalues
+  let U : Matrix.unitaryGroup V ℝ := hA.eigenvectorUnitary
+  let φ := Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) U
+  let s : V → ℝ := fun i => if 0 ≤ f i then 1 else -1
+  let S : Matrix V V ℝ := φ (Matrix.diagonal s)
+  let N : ℝ := Fintype.card V
+  have hN : 0 ≤ N := Nat.cast_nonneg _
+  have hs (i : V) : s i * s i = 1 := by
+    by_cases hi : 0 ≤ f i <;> simp [s, hi]
+  have hsabs (i : V) : f i * s i = |f i| := by
+    by_cases hi : 0 ≤ f i
+    · simp [s, hi, abs_of_nonneg hi]
+    · simp [s, hi, abs_of_neg (lt_of_not_ge hi)]
+  have htr (B : Matrix V V ℝ) : Matrix.trace (φ B) = Matrix.trace B := by
+    change Matrix.trace ((U : Matrix V V ℝ) * B *
+      (star U : Matrix V V ℝ)) = Matrix.trace B
+    rw [Matrix.trace_mul_cycle, Unitary.coe_star_mul_self, Matrix.one_mul]
+  have hSS : S * S = 1 := by
+    have hd : Matrix.diagonal s * Matrix.diagonal s = (1 : Matrix V V ℝ) := by
+      simp only [Matrix.diagonal_mul_diagonal, hs, Matrix.diagonal_one]
+    change φ (Matrix.diagonal s) * φ (Matrix.diagonal s) = 1
+    rw [← map_mul, hd, map_one]
+  have hST : Matrix.transpose S = S := by
+    have hstar : star S = S := by
+      change star (φ (Matrix.diagonal s)) = φ (Matrix.diagonal s)
+      rw [← map_star, Matrix.star_eq_conjTranspose,
+        Matrix.diagonal_conjTranspose, star_trivial]
+    simpa only [Matrix.star_eq_conjTranspose,
+      Matrix.conjTranspose_eq_transpose_of_trivial] using hstar
+  have hsym (i j : V) : S j i = S i j :=
+    congrFun (congrFun hST i) j
+  have henergy : Matrix.trace (A * S) = ∑ i : V, |f i| := by
+    have hspec : A = φ (Matrix.diagonal f) := by
+      simpa only [RCLike.ofReal_real_eq_id, Function.id_comp] using hA.spectral_theorem
+    calc
+      Matrix.trace (A * S) =
+          Matrix.trace (φ (Matrix.diagonal f * Matrix.diagonal s)) := by
+        rw [hspec]
+        change Matrix.trace (φ (Matrix.diagonal f) * φ (Matrix.diagonal s)) =
+          Matrix.trace (φ (Matrix.diagonal f * Matrix.diagonal s))
+        rw [map_mul]
+      _ = Matrix.trace (Matrix.diagonal f * Matrix.diagonal s) := htr _
+      _ = ∑ i : V, |f i| := by
+        simp only [Matrix.diagonal_mul_diagonal, Matrix.trace_diagonal, hsabs]
+  have hSsq : (∑ i : V, ∑ j : V, (S i j) ^ 2) = N := by
+    calc
+      (∑ i : V, ∑ j : V, (S i j) ^ 2) = Matrix.trace (S * S) := by
+        simp only [Matrix.trace, Matrix.diag_apply, Matrix.mul_apply]
+        apply Finset.sum_congr rfl
+        intro i _
+        apply Finset.sum_congr rfl
+        intro j _
+        rw [hsym i j, pow_two]
+      _ = N := by simpa only [hSS, Matrix.trace_one, N]
+  let r : V → ℝ := fun i => ∑ j : V, S i j
+  have hr : (∑ i : V, (r i) ^ 2) = N := by
+    let x : V → ℝ := fun _ => 1
+    have hx : Matrix.mulVec S x = r := by
+      funext i
+      simp [Matrix.mulVec, dotProduct, x, r]
+    calc
+      (∑ i : V, (r i) ^ 2) =
+          dotProduct (Matrix.mulVec S x) (Matrix.mulVec S x) := by
+        rw [hx]
+        simp only [dotProduct, pow_two]
+      _ = dotProduct x (Matrix.mulVec (Matrix.transpose S) (Matrix.mulVec S x)) :=
+        (Matrix.dotProduct_transpose_mulVec S x (Matrix.mulVec S x)).symm
+      _ = dotProduct x x := by
+        rw [Matrix.mulVec_mulVec, hST, hSS, Matrix.one_mulVec]
+      _ = N := by simp [dotProduct, x, N]
+  have hJ : (∑ i : V, r i) ≤ N := by
+    have hc := Finset.sum_mul_sq_le_sq_mul_sq
+      (Finset.univ : Finset V) (fun _ => (1 : ℝ)) r
+    simp only [one_mul, one_pow, Finset.sum_const, Finset.card_univ,
+      nsmul_eq_mul, mul_one, hr] at hc
+    have hsq : (∑ i : V, r i) ^ 2 ≤ N ^ 2 := by
+      simpa only [pow_two] using hc
+    exact le_of_sq_le_sq hsq hN
+  let B : Matrix V V ℝ := Matrix.of (fun i j => A i j - (1 / 2 : ℝ))
+  have hBentry (i j : V) : (B i j) ^ 2 = (1 / 4 : ℝ) := by
+    change (G.adjMatrix ℝ i j - (1 / 2 : ℝ)) ^ 2 = (1 / 4 : ℝ)
+    rcases (G.isAdjMatrix_adjMatrix ℝ).zero_or_one i j with hij | hij
+      <;> rw [hij] <;> norm_num
+  have hBsqPair : (∑ p : V × V, (B p.1 p.2) ^ 2) = (N / 2) ^ 2 := by
+    calc
+      (∑ p : V × V, (B p.1 p.2) ^ 2) = (N * N) * (1 / 4 : ℝ) := by
+        simp only [hBentry, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
+          Fintype.card_prod, Nat.cast_mul, N]
+      _ = (N / 2) ^ 2 := by ring
+  have hSsqPair : (∑ p : V × V, (S p.1 p.2) ^ 2) = N := by
+    simpa only [Fintype.sum_prod_type] using hSsq
+  let C : ℝ := ∑ p : V × V, B p.1 p.2 * S p.1 p.2
+  have hC : C ≤ N / 2 * Real.sqrt N := by
+    have hc := Finset.sum_mul_sq_le_sq_mul_sq
+      (Finset.univ : Finset (V × V))
+      (fun p => B p.1 p.2) (fun p => S p.1 p.2)
+    have hsq : C ^ 2 ≤ (N / 2 * Real.sqrt N) ^ 2 := by
+      calc
+        C ^ 2 ≤ (N / 2) ^ 2 * N := by
+          simpa only [hBsqPair, hSsqPair] using hc
+        _ = (N / 2 * Real.sqrt N) ^ 2 := by
+          symm
+          rw [mul_pow, Real.sq_sqrt hN]
+    exact le_of_sq_le_sq hsq
+      (mul_nonneg (div_nonneg hN (by norm_num)) (Real.sqrt_nonneg N))
+  have hdecomp : (∑ i : V, |f i|) = C + (1 / 2 : ℝ) * (∑ i : V, r i) := by
+    rw [← henergy]
+    calc
+      Matrix.trace (A * S) = ∑ i : V, ∑ j : V, A i j * S i j := by
+        simp only [Matrix.trace, Matrix.diag_apply, Matrix.mul_apply]
+        apply Finset.sum_congr rfl
+        intro i _
+        apply Finset.sum_congr rfl
+        intro j _
+        rw [hsym i j]
+      _ = (∑ i : V, ∑ j : V, B i j * S i j) +
+          (1 / 2 : ℝ) * (∑ i : V, ∑ j : V, S i j) := by
+        have hterm (i j : V) :
+            A i j * S i j = B i j * S i j + (1 / 2 : ℝ) * S i j := by
+          change A i j * S i j =
+            (A i j - (1 / 2 : ℝ)) * S i j + (1 / 2 : ℝ) * S i j
+          ring
+        simp_rw [hterm, Finset.sum_add_distrib, ← Finset.mul_sum]
+      _ = C + (1 / 2 : ℝ) * (∑ i : V, r i) := by
+        simp only [C, r, Fintype.sum_prod_type]
+  change (∑ i : V, |f i|) ≤ N / 2 * (1 + Real.sqrt N)
+  calc
+    (∑ i : V, |f i|) = C + (1 / 2 : ℝ) * (∑ i : V, r i) := hdecomp
+    _ ≤ N / 2 * Real.sqrt N + (1 / 2 : ℝ) * N :=
+      add_le_add hC (mul_le_mul_of_nonneg_left hJ (by norm_num))
+    _ = N / 2 * (1 + Real.sqrt N) := by ring
+
+theorem degree_sum_density_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((2 : ℝ) * (G.edgeFinset.card : ℝ)) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  have hn : 2 * G.edgeFinset.card ≤ Fintype.card V * G.maxDegree := by
+    calc
+      2 * G.edgeFinset.card = ∑ v, G.degree v := G.sum_degrees_eq_twice_card_edges.symm
+      _ ≤ ∑ _v : V, G.maxDegree := Finset.sum_le_sum fun v _ => G.degree_le_maxDegree v
+      _ = Fintype.card V * G.maxDegree := by simp
+  exact_mod_cast hn
+
+theorem composed_1f7e49d87d42f727 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  calc
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ (2 : ℝ) * (G.edgeFinset.card : ℝ) := gutman_energy_size_bound G
+    _ ≤ (Fintype.card V : ℝ) * (G.maxDegree : ℝ) := degree_sum_density_bound G
+
+theorem model_858f11e4042b2a0e80d8 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.maxDegree : ℝ) ≤ (20000001 / 10000000 : ℝ))) :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ (((Fintype.card V : ℝ) * (Real.sqrt (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ)))) - ((((Fintype.card V : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ))) * ((if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ)) - (1 : ℝ))) / (48 : ℝ))) := by
+  classical
+  have hDelta : G.maxDegree ≤ 2 := by
+    by_contra h
+    have hn : 3 ≤ G.maxDegree := by omega
+    have hr : (3 : ℝ) ≤ (G.maxDegree : ℝ) := by exact_mod_cast hn
+    linarith
+  by_cases hn0 : Fintype.card V = 0
+  · letI : IsEmpty V := Fintype.card_eq_zero_iff.mp hn0
+    simp [hn0]
+  haveI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hn0)
+  let n : ℝ := Fintype.card V
+  let q : ℝ := 2 * (G.edgeFinset.card : ℝ)
+  let a : ℝ := q / n
+  let r : ℝ := Real.sqrt a
+  let E : ℝ := ∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|
+  have hn : 0 < n := by
+    dsimp only [n]
+    exact_mod_cast Nat.pos_of_ne_zero hn0
+  have hnne : n ≠ 0 := ne_of_gt hn
+  have ha : 0 ≤ a :=
+    div_nonneg (mul_nonneg (by norm_num) (Nat.cast_nonneg _)) hn.le
+  have hna : n * a = q := by
+    have h : q = a * n :=
+      (div_eq_iff hnne).mp (show q / n = a from rfl)
+    exact (mul_comm n a).trans h.symm
+  have ha2 : a ≤ 2 := by
+    have hden : q ≤ n * (G.maxDegree : ℝ) := degree_sum_density_bound G
+    have hdreal : (G.maxDegree : ℝ) ≤ 2 := by exact_mod_cast hDelta
+    have hq : q ≤ n * 2 :=
+      hden.trans (mul_le_mul_of_nonneg_left hdreal hn.le)
+    rw [← hna] at hq
+    exact (mul_le_mul_iff_right₀ hn).mp hq
+  have hrnonneg : 0 ≤ r := Real.sqrt_nonneg a
+  have hrsq : r ^ 2 = a := Real.sq_sqrt ha
+  simp only [if_neg hn0]
+  change E ≤ n * r - (n * a * (a - 1)) / 48
+  have hMc : E ≤ n * r := by
+    apply le_of_sq_le_sq ?_ (mul_nonneg hn.le hrnonneg)
+    calc
+      E ^ 2 ≤ 2 * (n * (G.edgeFinset.card : ℝ)) :=
+        model_081bc55d24f66b98c45d G
+      _ = n * q := by dsimp only [q]; ring
+      _ = (n * r) ^ 2 := by
+        rw [← hna, mul_pow, hrsq]
+        ring
+  by_cases ha1 : a ≤ 1
+  · have hneg : n * a * (a - 1) ≤ 0 :=
+      mul_nonpos_of_nonneg_of_nonpos (mul_nonneg hn.le ha) (sub_nonpos.mpr ha1)
+    have hdiv : (n * a * (a - 1)) / 48 ≤ 0 :=
+      div_nonpos_of_nonpos_of_nonneg hneg (by norm_num)
+    linarith only [hMc, hdiv]
+  have hagt : 1 < a := lt_of_not_ge ha1
+  have hrpos : 0 < r :=
+    Real.sqrt_pos.mpr (lt_trans (by norm_num : (0 : ℝ) < 1) hagt)
+  have hrle : r ≤ 3 / 2 := by
+    apply Real.sqrt_le_iff.mpr
+    constructor
+    · norm_num
+    · nlinarith only [ha2]
+  let A : Matrix V V ℝ := G.adjMatrix ℝ
+  let hA : A.IsHermitian := G.isHermitian_adjMatrix ℝ
+  let f : V → ℝ := hA.eigenvalues
+  let b := hA.eigenvectorBasis
+  have hfbound (i : V) : |f i| ≤ 2 := by
+    obtain ⟨v, hv, hmax⟩ := Finset.exists_max_image
+      (Finset.univ : Finset V) (fun v => |b i v|) Finset.univ_nonempty
+    have hpos : 0 < |b i v| := by
+      by_contra hp
+      have hz : |b i v| = 0 :=
+        le_antisymm (le_of_not_gt hp) (abs_nonneg _)
+      have hbzero : b i = 0 := by
+        ext w
+        change b i w = 0
+        apply abs_eq_zero.mp
+        exact le_antisymm
+          ((hmax w (Finset.mem_univ w)).trans_eq hz) (abs_nonneg _)
+      exact (b.orthonormal.ne_zero i) hbzero
+    have heq : (∑ w ∈ G.neighborFinset v, b i w) = f i * b i v := by
+      have he := congrFun (hA.mulVec_eigenvectorBasis i) v
+      simpa only [A, b, f, SimpleGraph.adjMatrix_mulVec_apply,
+        Pi.smul_apply, smul_eq_mul] using he
+    have hmul : |f i| * |b i v| ≤ 2 * |b i v| := by
+      calc
+        _ = |∑ w ∈ G.neighborFinset v, b i w| := by rw [heq, abs_mul]
+        _ ≤ ∑ w ∈ G.neighborFinset v, |b i w| :=
+          Finset.abs_sum_le_sum_abs _ _
+        _ ≤ ∑ _w ∈ G.neighborFinset v, |b i v| :=
+          Finset.sum_le_sum (fun w _ => hmax w (Finset.mem_univ w))
+        _ = (G.degree v : ℝ) * |b i v| := by
+          simp only [Finset.sum_const, nsmul_eq_mul,
+            G.card_neighborFinset_eq_degree]
+        _ ≤ 2 * |b i v| :=
+          mul_le_mul_of_nonneg_right
+            (by exact_mod_cast (G.degree_le_maxDegree v).trans hDelta)
+            (abs_nonneg _)
+    exact (mul_le_mul_iff_left₀ hpos).mp hmul
+  let φ := Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) hA.eigenvectorUnitary
+  have hspec : A = φ (Matrix.diagonal f) := by
+    simpa only [φ, f, RCLike.ofReal_real_eq_id, Function.id_comp]
+      using hA.spectral_theorem
+  have htr (M : Matrix V V ℝ) : Matrix.trace (φ M) = Matrix.trace M := by
+    change Matrix.trace ((hA.eigenvectorUnitary : Matrix V V ℝ) * M *
+      (star hA.eigenvectorUnitary : Matrix V V ℝ)) = Matrix.trace M
+    rw [Matrix.trace_mul_cycle, Unitary.coe_star_mul_self, Matrix.one_mul]
+  have htracepow (k : ℕ) : Matrix.trace (A ^ k) = ∑ v : V, f v ^ k := by
+    calc
+      _ = Matrix.trace (φ (Matrix.diagonal f ^ k)) := by
+        rw [map_pow, ← hspec]
+      _ = Matrix.trace (Matrix.diagonal f ^ k) := htr _
+      _ = _ := by simp [Matrix.diagonal_pow]
+  have hdegSum : (∑ v : V, (G.degree v : ℝ)) = n * a := by
+    calc
+      _ = q := by
+        dsimp only [q]
+        exact_mod_cast G.sum_degrees_eq_twice_card_edges
+      _ = n * a := hna.symm
+  have hF2 : (∑ v : V, f v ^ 2) = n * a := by
+    rw [← htracepow 2, pow_two]
+    calc
+      Matrix.trace (A * A) = ∑ v : V, (G.degree v : ℝ) := by
+        simp only [A, Matrix.trace, Matrix.diag_apply,
+          G.adjMatrix_mul_self_apply_self]
+      _ = n * a := hdegSum
+  let s : ℝ := ∑ v : V, (G.degree v : ℝ) ^ 2
+  have hS : n * a ^ 2 ≤ s := by
+    have hCS := Finset.sum_mul_sq_le_sq_mul_sq
+      (Finset.univ : Finset V) (fun _ => (1 : ℝ))
+      (fun v => (G.degree v : ℝ))
+    simp only [one_mul, one_pow, Finset.sum_const, Finset.card_univ,
+      nsmul_eq_mul, mul_one] at hCS
+    rw [hdegSum] at hCS
+    change (n * a) ^ 2 ≤ n * s at hCS
+    apply (mul_le_mul_iff_right₀ hn).mp
+    nlinarith only [hCS]
+  let B : Matrix V V ℝ := A * A
+  let C : Matrix V V ℕ := G.adjMatrix ℕ * G.adjMatrix ℕ
+  have hcast (u v : V) : (C u v : ℝ) = B u v := by
+    simp only [C, B, A, Matrix.mul_apply, Nat.cast_sum, Nat.cast_mul,
+      SimpleGraph.adjMatrix_apply, Nat.cast_ite, Nat.cast_one, Nat.cast_zero]
+  have hBsq (u v : V) : B u v ≤ B u v ^ 2 := by
+    by_cases hz : C u v = 0
+    · rw [← hcast u v, hz]
+      norm_num
+    · have hc : 1 ≤ C u v := by omega
+      have hr : (1 : ℝ) ≤ B u v := by
+        rw [← hcast u v]
+        exact_mod_cast hc
+      have hp := mul_nonneg (sub_nonneg.mpr hr)
+        ((by norm_num : (0 : ℝ) ≤ 1).trans hr)
+      nlinarith only [hp]
+  have hBdiag (u : V) : B u u = (G.degree u : ℝ) :=
+    G.adjMatrix_mul_self_apply_self u
+  have hBT : Matrix.transpose B = B := by
+    simp only [B, A, Matrix.transpose_mul, SimpleGraph.transpose_adjMatrix]
+  have hBsym (u v : V) : B v u = B u v :=
+    congrFun (congrFun hBT u) v
+  have hAsym (u v : V) : A v u = A u v :=
+    (G.isSymm_adjMatrix (α := ℝ)).apply u v
+  have hrow (u : V) : (∑ v : V, A u v) = (G.degree u : ℝ) := by
+    simpa only [A, SimpleGraph.adjMatrix_apply]
+      using (G.degree_eq_sum_if_adj (R := ℝ) u).symm
+  have hcol (v : V) : (∑ u : V, A u v) = (G.degree v : ℝ) := by
+    calc
+      _ = ∑ u : V, A v u :=
+        Finset.sum_congr rfl (fun u _ => hAsym v u)
+      _ = _ := hrow v
+  have hallB : (∑ u : V, ∑ v : V, B u v) = s := by
+    calc
+      _ = ∑ u : V, ∑ v : V, ∑ w : V, A u w * A w v := by
+        simp only [B, Matrix.mul_apply]
+      _ = ∑ u : V, ∑ w : V, ∑ v : V, A u w * A w v := by
+        apply Finset.sum_congr rfl
+        intro u _
+        exact Finset.sum_comm
+      _ = ∑ w : V, ∑ u : V, ∑ v : V, A u w * A w v :=
+        Finset.sum_comm
+      _ = ∑ w : V, (∑ u : V, A u w) * (∑ v : V, A w v) := by
+        simp only [← Finset.mul_sum, ← Finset.sum_mul]
+      _ = s := by simp only [hcol, hrow, s, pow_two]
+  have hFourth : (∑ v : V, f v ^ 4) =
+      ∑ u : V, ∑ v : V, B u v ^ 2 := by
+    have hp : A ^ 4 = B * B := by
+      calc
+        A ^ 4 = A ^ (2 + 2) := rfl
+        _ = A ^ 2 * A ^ 2 := pow_add A 2 2
+        _ = B * B := by simp only [B, pow_two]
+    calc
+      _ = Matrix.trace (A ^ 4) := (htracepow 4).symm
+      _ = Matrix.trace (B * B) := congrArg Matrix.trace hp
+      _ = _ := by
+        simp only [Matrix.trace, Matrix.diag_apply, Matrix.mul_apply]
+        apply Finset.sum_congr rfl
+        intro u _
+        apply Finset.sum_congr rfl
+        intro v _
+        rw [hBsym u v, pow_two]
+  have hpoint (u v : V) :
+      B u v + (if u = v then (G.degree u : ℝ) ^ 2 - (G.degree u : ℝ)
+        else 0) ≤ B u v ^ 2 := by
+    by_cases huv : u = v
+    · subst v
+      simp only [if_pos rfl, hBdiag, ite_true]
+      nlinarith only []
+    · rw [if_neg huv, add_zero]
+      exact hBsq u v
+  have hF4bound : 2 * s - n * a ≤ ∑ v : V, f v ^ 4 := by
+    have h := Finset.sum_le_sum (s := (Finset.univ : Finset V))
+      (fun u _ => Finset.sum_le_sum (s := (Finset.univ : Finset V))
+        (fun v _ => hpoint u v))
+    simp only [Finset.sum_add_distrib, Finset.sum_ite_eq,
+      Finset.mem_univ, ite_true, Finset.sum_sub_distrib] at h
+    rw [hallB, hdegSum, ← hFourth] at h
+    change s + (s - n * a) ≤ ∑ v : V, f v ^ 4 at h
+    linarith only [h]
+  let δ : ℝ := ∑ v : V, (f v ^ 2 - a) ^ 2
+  have hδ : δ = (∑ v : V, f v ^ 4) - n * a ^ 2 := by
+    have ht (v : V) : (f v ^ 2 - a) ^ 2 =
+        f v ^ 4 - 2 * a * f v ^ 2 + a ^ 2 := by ring
+    dsimp only [δ]
+    simp only [ht, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+      ← Finset.mul_sum, Finset.sum_const, Finset.card_univ,
+      nsmul_eq_mul, hF2]
+    change (∑ v : V, f v ^ 4) - 2 * a * (n * a) + n * a ^ 2 =
+      (∑ v : V, f v ^ 4) - n * a ^ 2
+    ring
+  have hδlower : n * a * (a - 1) ≤ δ := by
+    rw [hδ]
+    nlinarith only [hF4bound, hS]
+  have hscalar (i : V) :
+      2 * r * |f i| ≤ f i ^ 2 + a - (r / 24) * (f i ^ 2 - a) ^ 2 := by
+    let t : ℝ := |f i|
+    have ht0 : 0 ≤ t := abs_nonneg _
+    have ht2 : t ≤ 2 := hfbound i
+    have hsum0 : 0 ≤ t + r := add_nonneg ht0 hrnonneg
+    have hsum4 : t + r ≤ 4 := by linarith only [ht2, hrle]
+    have hsquare : (t + r) ^ 2 ≤ 16 := by
+      have hp := mul_nonneg (sub_nonneg.mpr hsum4)
+        (add_nonneg (by norm_num : (0 : ℝ) ≤ 4) hsum0)
+      nlinarith only [hp]
+    have hcoef : r * (t + r) ^ 2 ≤ 24 := by
+      calc
+        _ ≤ r * 16 := mul_le_mul_of_nonneg_left hsquare hrnonneg
+        _ ≤ 24 := by linarith only [hrle]
+    have hp := mul_nonneg (sq_nonneg (t - r)) (sub_nonneg.mpr hcoef)
+    have ht : 2 * r * t ≤ t ^ 2 + a - (r / 24) * (t ^ 2 - a) ^ 2 := by
+      rw [← hrsq]
+      nlinarith only [hp]
+    simpa only [t, sq_abs] using ht
+  have hsum := Finset.sum_le_sum (s := (Finset.univ : Finset V))
+    (fun i _ => hscalar i)
+  simp only [Finset.sum_sub_distrib, Finset.sum_add_distrib,
+    ← Finset.mul_sum, Finset.sum_const, Finset.card_univ,
+    nsmul_eq_mul, hF2] at hsum
+  change 2 * r * E ≤ n * a + n * a - (r / 24) * δ at hsum
+  apply (mul_le_mul_iff_right₀ (mul_pos (by norm_num : (0 : ℝ) < 2) hrpos)).mp
+  calc
+    (2 * r) * E ≤ n * a + n * a - (r / 24) * δ := hsum
+    _ ≤ n * a + n * a - (r / 24) * (n * a * (a - 1)) :=
+      sub_le_sub_left
+        (mul_le_mul_of_nonneg_left hδlower
+          (div_nonneg hrnonneg (by norm_num))) _
+    _ = (2 * r) * (n * r - (n * a * (a - 1)) / 48) := by
+      rw [← hrsq]
+      ring
+
+theorem hull3d_graph_energy_le_0_2_average_degree_size_0_is_regular_99710b2e7422 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((∃ d : ℕ, G.IsRegularOfDegree d))) :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+  obtain ⟨d, hd⟩ := h_guard
+  have hbound (i : V) : |(G.isHermitian_adjMatrix ℝ).eigenvalues i| ≤ (d : ℝ) := by
+    let x : V → ℝ := ⇑((G.isHermitian_adjMatrix ℝ).eigenvectorBasis i)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2
+        ((G.isHermitian_adjMatrix ℝ).eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨j, hj⟩ := Function.ne_iff.mp hx
+    obtain ⟨w, _, hw⟩ := Finset.exists_max_image Finset.univ (fun v => |x v|)
+      ⟨j, Finset.mem_univ j⟩
+    have hwpos : 0 < |x w| :=
+      lt_of_lt_of_le (abs_pos.mpr hj) (hw j (Finset.mem_univ j))
+    have heq : (∑ u ∈ G.neighborFinset w, x u) =
+        (G.isHermitian_adjMatrix ℝ).eigenvalues i * x w := by
+      simpa only [SimpleGraph.adjMatrix_mulVec_apply, Pi.smul_apply, smul_eq_mul] using
+        congrFun ((G.isHermitian_adjMatrix ℝ).mulVec_eigenvectorBasis i) w
+    have hmul : |(G.isHermitian_adjMatrix ℝ).eigenvalues i| * |x w| ≤
+        (d : ℝ) * |x w| := by
+      calc
+        |(G.isHermitian_adjMatrix ℝ).eigenvalues i| * |x w| =
+            |∑ u ∈ G.neighborFinset w, x u| := by rw [heq, abs_mul]
+        _ ≤ ∑ u ∈ G.neighborFinset w, |x u| :=
+          Finset.abs_sum_le_sum_abs x (G.neighborFinset w)
+        _ ≤ ∑ u ∈ G.neighborFinset w, |x w| :=
+          Finset.sum_le_sum (fun u _ => hw u (Finset.mem_univ u))
+        _ = (d : ℝ) * |x w| := by
+          simp only [Finset.sum_const, G.card_neighborFinset_eq_degree,
+            hd.degree_eq, nsmul_eq_mul]
+    exact (mul_le_mul_iff_left₀ hwpos).mp hmul
+  calc
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤
+        ∑ _v : V, (d : ℝ) :=
+      Finset.sum_le_sum (fun v _ => hbound v)
+    _ = ∑ v : V, (G.degree v : ℝ) := by simp only [hd.degree_eq]
+    _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast G.sum_degrees_eq_twice_card_edges
+theorem model_2649c493de46c591f981 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.maxDegree : ℝ) ≤ (20000001 / 10000000 : ℝ))) :
+    (∑ v : V, |(G.isHermitian_adjMatrix ℝ).eigenvalues v|) ≤ (((2 : ℝ) * ((Fintype.card V : ℝ) + (G.edgeFinset.card : ℝ))) / (3 : ℝ)) := by
+  sorry

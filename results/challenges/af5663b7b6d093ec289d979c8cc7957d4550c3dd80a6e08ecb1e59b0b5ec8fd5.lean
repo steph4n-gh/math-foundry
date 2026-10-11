@@ -1,0 +1,309 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Tactic
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem generative_chromatic_degree_pilot {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  have hpartial : ∀ s : Finset V,
+      ∃ c : V → Fin (G.maxDegree + 1),
+        ∀ v ∈ s, ∀ w ∈ s, G.Adj v w → c v ≠ c w := by
+    intro s
+    induction s using Finset.induction_on with
+    | empty =>
+        refine ⟨fun _ => ⟨0, Nat.zero_lt_succ _⟩, ?_⟩
+        intro v hv
+        simp at hv
+    | @insert a s ha ih =>
+        obtain ⟨c, hc⟩ := ih
+        have hcard : ((G.neighborFinset a).image c).card <
+            (Finset.univ : Finset (Fin (G.maxDegree + 1))).card := by
+          calc
+            ((G.neighborFinset a).image c).card ≤
+                (G.neighborFinset a).card := Finset.card_image_le
+            _ = G.degree a := rfl
+            _ ≤ G.maxDegree := G.degree_le_maxDegree a
+            _ < (Finset.univ : Finset (Fin (G.maxDegree + 1))).card := by simp
+        obtain ⟨d, _, hd⟩ := Finset.exists_mem_notMem_of_card_lt_card hcard
+        have hdc : ∀ w, G.Adj a w → d ≠ c w := by
+          intro w haw heq
+          apply hd
+          exact Finset.mem_image.mpr
+            ⟨w, (G.mem_neighborFinset a w).mpr haw, heq.symm⟩
+        refine ⟨fun v => if v = a then d else c v, ?_⟩
+        intro v hv w hw hvw
+        by_cases hva : v = a
+        · subst v
+          have hwa : w ≠ a := hvw.ne'
+          simpa [hwa] using hdc w hvw
+        · by_cases hwa : w = a
+          · subst w
+            simpa [hva] using (hdc v hvw.symm).symm
+          · have hvs : v ∈ s := (Finset.mem_insert.mp hv).resolve_left hva
+            have hws : w ∈ s := (Finset.mem_insert.mp hw).resolve_left hwa
+            simpa [hva, hwa] using hc v hvs w hws hvw
+  obtain ⟨c, hc⟩ := hpartial Finset.univ
+  have hcolor : G.Colorable (G.maxDegree + 1) :=
+    ⟨SimpleGraph.Coloring.mk c (fun {v w} h =>
+      hc v (Finset.mem_univ v) w (Finset.mem_univ w) h)⟩
+  have hn : G.chromaticNumber.toNat ≤ G.maxDegree + 1 :=
+    ENat.toNat_le_of_le_natCast hcolor.chromaticNumber_le
+  exact_mod_cast hn
+
+theorem archetype_brooks_standard {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  have h := generative_chromatic_degree_pilot G; nlinarith [(show (0 : ℝ) ≤ (Fintype.card V : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.maxDegree : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.cliqueNum : ℝ) from Nat.cast_nonneg _), (show (0 : ℝ) ≤ (G.chromaticNumber.toNat : ℝ) from Nat.cast_nonneg _)]
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem archetype_spectral_wilf {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ ((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) + (1 : ℝ)) := by
+  classical
+  by_cases hempty : Fintype.card V = 0
+  · have h := chromatic_le_order G
+    rw [hempty, Nat.cast_zero] at h
+    rw [if_pos hempty]
+    linarith
+  rw [if_neg hempty]
+  let r : ℝ := sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)
+  change (G.chromaticNumber.toNat : ℝ) ≤ r + 1
+  let b : OrthonormalBasis V ℝ (EuclideanSpace ℝ V) :=
+    (G.isHermitian_adjMatrix ℝ).eigenvectorBasis
+  have hsym : (G.adjMatrix ℝ).toEuclideanLin.IsSymmetric :=
+    Matrix.isSymmetric_toEuclideanLin_iff.mpr (G.isHermitian_adjMatrix ℝ)
+  have heig (i : V) : (G.adjMatrix ℝ).toEuclideanLin (b i) =
+      (G.isHermitian_adjMatrix ℝ).eigenvalues i • b i := by
+    apply WithLp.ofLp_injective 2
+    simpa only [Matrix.toLpLin_apply, WithLp.ofLp_toLp, WithLp.ofLp_smul] using
+      (G.isHermitian_adjMatrix ℝ).mulVec_eigenvectorBasis i
+  have hle (i : V) : (G.isHermitian_adjMatrix ℝ).eigenvalues i ≤ r :=
+    le_csSup (Set.finite_range _).bddAbove ⟨i, rfl⟩
+  have hq (x : EuclideanSpace ℝ V) :
+      inner ℝ ((G.adjMatrix ℝ).toEuclideanLin x) x ≤ r * inner ℝ x x := by
+    calc
+      inner ℝ ((G.adjMatrix ℝ).toEuclideanLin x) x =
+          ∑ i : V, (G.isHermitian_adjMatrix ℝ).eigenvalues i *
+            (inner ℝ x (b i)) ^ 2 := by
+        rw [← b.sum_inner_mul_inner ((G.adjMatrix ℝ).toEuclideanLin x) x]
+        apply Finset.sum_congr rfl
+        intro i hi
+        rw [hsym x (b i), heig i, inner_smul_right, real_inner_comm x (b i)]
+        ring
+      _ ≤ ∑ i : V, r * (inner ℝ x (b i)) ^ 2 :=
+        Finset.sum_le_sum (fun i _ =>
+          mul_le_mul_of_nonneg_right (hle i) (sq_nonneg _))
+      _ = r * inner ℝ x x := by
+        rw [← Finset.mul_sum]
+        congr 1
+        calc
+          (∑ i : V, (inner ℝ x (b i)) ^ 2) =
+              ∑ i : V, inner ℝ x (b i) * inner ℝ (b i) x := by
+            apply Finset.sum_congr rfl
+            intro i hi
+            rw [real_inner_comm x (b i)]
+            ring
+          _ = inner ℝ x x := b.sum_inner_mul_inner x x
+  have hsum (s : Finset V) :
+      (∑ v ∈ s, ((G.neighborFinset v ∩ s).card : ℝ)) ≤ r * (s.card : ℝ) := by
+    let f : V → ℝ := fun v => if v ∈ s then 1 else 0
+    let x : EuclideanSpace ℝ V := WithLp.toLp 2 f
+    have hf (v : V) : f v * f v = f v := by
+      by_cases hv : v ∈ s <;> simp [f, hv]
+    have hvec (v : V) : Matrix.mulVec (G.adjMatrix ℝ) f v =
+        ((G.neighborFinset v ∩ s).card : ℝ) := by
+      rw [G.adjMatrix_mulVec_apply]
+      simp [f, ← Finset.sum_filter, Finset.filter_mem_eq_inter]
+    have hnorm : inner ℝ x x = (s.card : ℝ) := by
+      rw [EuclideanSpace.inner_eq_star_dotProduct]
+      simp only [x, WithLp.ofLp_toLp, star_trivial]
+      change (∑ v : V, f v * f v) = (s.card : ℝ)
+      simp only [hf]
+      simp [f, ← Finset.sum_filter, Finset.filter_mem_eq_inter]
+    have hinner : inner ℝ ((G.adjMatrix ℝ).toEuclideanLin x) x =
+        ∑ v ∈ s, ((G.neighborFinset v ∩ s).card : ℝ) := by
+      rw [Matrix.toLpLin_apply, EuclideanSpace.inner_eq_star_dotProduct]
+      simp only [x, WithLp.ofLp_toLp, star_trivial]
+      change (∑ v : V, f v * Matrix.mulVec (G.adjMatrix ℝ) f v) = _
+      simp only [hvec]
+      simp [f, ite_mul, ← Finset.sum_filter, Finset.filter_mem_eq_inter]
+    simpa only [hinner, hnorm] using hq x
+  obtain ⟨v⟩ : Nonempty V :=
+    Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hempty)
+  have hr : 0 ≤ r := by
+    have h := hsum ({v} : Finset V)
+    simpa [Finset.inter_singleton_of_notMem (G.notMem_neighborFinset_self v)] using h
+  have hsmall (s : Finset V) (hs : s.Nonempty) :
+      ∃ a ∈ s, ((G.neighborFinset a ∩ s).card : ℝ) ≤ r := by
+    by_contra hn
+    have hall : ∀ a ∈ s, r < ((G.neighborFinset a ∩ s).card : ℝ) := by
+      intro a ha
+      exact lt_of_not_ge (fun h => hn ⟨a, ha, h⟩)
+    have hlt : r * (s.card : ℝ) <
+        ∑ a ∈ s, ((G.neighborFinset a ∩ s).card : ℝ) := by
+      simpa [mul_comm] using Finset.sum_lt_sum_of_nonempty hs hall
+    exact (not_lt_of_ge (hsum s)) hlt
+  by_contra hnot
+  have hlt : r + 1 < (G.chromaticNumber.toNat : ℝ) := lt_of_not_ge hnot
+  have hposR : (0 : ℝ) < (G.chromaticNumber.toNat : ℝ) := by linarith
+  have hpos : 0 < G.chromaticNumber.toNat := by exact_mod_cast hposR
+  let k : ℕ := G.chromaticNumber.toNat - 1
+  have hkchi : G.chromaticNumber.toNat = k + 1 := by
+    dsimp [k]
+    omega
+  have hrk : r < (k : ℝ) := by
+    rw [hkchi, Nat.cast_add, Nat.cast_one] at hlt
+    linarith
+  have hk : 0 < k := by
+    have h : (0 : ℝ) < (k : ℝ) := hr.trans_lt hrk
+    exact_mod_cast h
+  have hpartial : ∀ s : Finset V,
+      ∃ c : V → Fin k,
+        ∀ v ∈ s, ∀ w ∈ s, G.Adj v w → c v ≠ c w := by
+    intro s
+    refine Finset.strongInductionOn s ?_
+    intro s ih
+    by_cases hs : s.Nonempty
+    · obtain ⟨a, ha, hdegR⟩ := hsmall s hs
+      have hdeg : (G.neighborFinset a ∩ s).card < k := by
+        exact_mod_cast (hdegR.trans_lt hrk)
+      obtain ⟨c, hc⟩ := ih (s.erase a) (Finset.erase_ssubset ha)
+      have hcard : ((G.neighborFinset a ∩ s).image c).card <
+          (Finset.univ : Finset (Fin k)).card := by
+        calc
+          ((G.neighborFinset a ∩ s).image c).card ≤
+              (G.neighborFinset a ∩ s).card := Finset.card_image_le
+          _ < (Finset.univ : Finset (Fin k)).card := by simpa using hdeg
+      obtain ⟨d, _, hd⟩ := Finset.exists_mem_notMem_of_card_lt_card hcard
+      have hdc : ∀ w ∈ s, G.Adj a w → d ≠ c w := by
+        intro w hw haw heq
+        apply hd
+        exact Finset.mem_image.mpr
+          ⟨w, Finset.mem_inter.mpr ⟨(G.mem_neighborFinset a w).mpr haw, hw⟩,
+            heq.symm⟩
+      refine ⟨fun v => if v = a then d else c v, ?_⟩
+      intro v hv w hw hvw
+      by_cases hva : v = a
+      · subst v
+        have hwa : w ≠ a := hvw.ne'
+        simpa [hwa] using hdc w hw hvw
+      · by_cases hwa : w = a
+        · subst w
+          simpa [hva] using (hdc v hv hvw.symm).symm
+        · have hvs : v ∈ s.erase a := Finset.mem_erase.mpr ⟨hva, hv⟩
+          have hws : w ∈ s.erase a := Finset.mem_erase.mpr ⟨hwa, hw⟩
+          simpa [hva, hwa] using hc v hvs w hws hvw
+    · have hs0 : s = ∅ := Finset.not_nonempty_iff_eq_empty.mp hs
+      subst s
+      refine ⟨fun _ => ⟨0, hk⟩, ?_⟩
+      intro v hv
+      simp at hv
+  obtain ⟨c, hc⟩ := hpartial Finset.univ
+  have hcolor : G.Colorable k :=
+    ⟨SimpleGraph.Coloring.mk c (fun {v w} h =>
+      hc v (Finset.mem_univ v) w (Finset.mem_univ w) h)⟩
+  have hn : G.chromaticNumber.toNat ≤ k :=
+    ENat.toNat_le_of_le_natCast hcolor.chromaticNumber_le
+  omega
+
+theorem hull_chromatic_number_le_0_5_size_1_5_4ae9b1d23719 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (((1 / 2 : ℝ) * (G.edgeFinset.card : ℝ)) + (3 / 2 : ℝ)) := by
+  classical
+  let k : ℕ := G.chromaticNumber.toNat
+  obtain ⟨c⟩ := G.colorable_chromaticNumber_of_fintype
+  let H : SimpleGraph (Fin k) := G.map c
+  have hhom : G →g H :=
+    SimpleGraph.Hom.map c G (fun {v w} h => c.valid h)
+  have hchi : H.chromaticNumber = (k : ℕ∞) := by
+    apply le_antisymm
+    · simpa only [Fintype.card_fin] using H.chromaticNumber_le_card
+    · exact (ENat.natCast_toNat_le_self G.chromaticNumber).trans
+        (SimpleGraph.chromaticNumber_mono_of_hom hhom)
+  have htop : H = ⊤ :=
+    SimpleGraph.eq_top_of_chromaticNumber_eq_card (G := H)
+      (by simpa only [Fintype.card_fin] using hchi)
+  have hsub : H.edgeFinset ⊆ G.edgeFinset.image (Sym2.map c) := by
+    intro e he
+    obtain ⟨i, j⟩ := e
+    have hij : H.Adj i j := by
+      simpa only [SimpleGraph.mem_edgeFinset, SimpleGraph.mem_edgeSet] using he
+    obtain ⟨_, v, w, hvw, hvi, hwj⟩ :=
+      (SimpleGraph.map_adj' c G i j).mp hij
+    refine Finset.mem_image.mpr ⟨s(v, w), ?_, ?_⟩
+    · simpa only [SimpleGraph.mem_edgeFinset, SimpleGraph.mem_edgeSet] using hvw
+    · simp only [Sym2.map_mk, hvi, hwj]
+  have hcard : H.edgeFinset.card ≤ G.edgeFinset.card :=
+    (Finset.card_le_card hsub).trans Finset.card_image_le
+  have hsum : k * (k - 1) = 2 * H.edgeFinset.card := by
+    calc
+      k * (k - 1) = ∑ i : Fin k, H.degree i := by
+        have hdeg (i : Fin k) : H.degree i = k - 1 := by
+          have hn : H.neighborFinset i =
+              (Finset.univ : Finset (Fin k)).erase i := by
+            ext j
+            simp only [SimpleGraph.mem_neighborFinset, Finset.mem_erase,
+              Finset.mem_univ, and_true, htop, SimpleGraph.top_adj, ne_comm]
+          change (H.neighborFinset i).card = k - 1
+          rw [hn, Finset.card_erase_of_mem (Finset.mem_univ i)]
+          simp only [Finset.card_univ, Fintype.card_fin]
+        simp only [hdeg, Finset.sum_const, Finset.card_univ,
+          Fintype.card_fin, Nat.nsmul_eq_mul]
+      _ = 2 * H.edgeFinset.card := H.sum_degrees_eq_twice_card_edges
+  have hbound : k * (k - 1) ≤ 2 * G.edgeFinset.card := by
+    rw [hsum]
+    exact Nat.mul_le_mul_left 2 hcard
+  change (k : ℝ) ≤ (1 / 2 : ℝ) * (G.edgeFinset.card : ℝ) + (3 / 2 : ℝ)
+  by_cases hk : k ≤ 1
+  · have hkR : (k : ℝ) ≤ 1 := by exact_mod_cast hk
+    have hmR : (0 : ℝ) ≤ (G.edgeFinset.card : ℝ) := Nat.cast_nonneg _
+    linarith only [hkR, hmR]
+  have hk1 : 1 ≤ k := by omega
+  have hboundR : (k : ℝ) * ((k : ℝ) - 1) ≤ 2 * (G.edgeFinset.card : ℝ) := by
+    have h : (k : ℝ) * ((k - 1 : ℕ) : ℝ) ≤ 2 * (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast hbound
+    simpa only [Nat.cast_sub hk1, Nat.cast_one] using h
+  by_cases hk2 : k = 2
+  · have hk2R : (k : ℝ) = 2 := by exact_mod_cast hk2
+    rw [hk2R] at hboundR ⊢
+    linarith only [hboundR]
+  have hk3 : 3 ≤ k := by omega
+  have hk3R : (3 : ℝ) ≤ (k : ℝ) := by exact_mod_cast hk3
+  have hprod : (0 : ℝ) ≤ ((k : ℝ) - 2) * ((k : ℝ) - 3) :=
+    mul_nonneg (by linarith only [hk3R]) (by linarith only [hk3R])
+  nlinarith only [hboundR, hprod]
+
+theorem hull_chromatic_number_le_1_size_1_658db08f8c3d {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ ((G.edgeFinset.card : ℝ) + (1 : ℝ)) := by
+  have hmax : G.maxDegree ≤ G.edgeFinset.card :=
+    G.maxDegree_le_of_forall_degree_le _ (fun v => G.degree_le_card_edgeFinset v)
+  have hmaxR : (G.maxDegree : ℝ) ≤ (G.edgeFinset.card : ℝ) := by
+    exact_mod_cast hmax
+  have h := generative_chromatic_degree_pilot G
+  linarith
+theorem hull_chromatic_number_le_0_5_signless_laplacian_spectral_radius_1_d6eec3bf02f8 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (((1 / 2 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range ((G.isHermitian_degMatrix ℝ).add (G.isHermitian_adjMatrix ℝ)).eigenvalues))) + (1 : ℝ)) := by
+  sorry

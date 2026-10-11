@@ -1,0 +1,388 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Constructions
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem hull_order_le_1_nordhaus_gaddum_spectral_sum_1_914963b7a9e6 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Fintype.card V : ℝ) ≤ (((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) + (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues))) + (1 : ℝ)) := by
+  classical
+  by_cases hn : Fintype.card V = 0
+  · simp [hn]
+  · simp only [if_neg hn]
+    let A : Matrix V V ℝ := G.adjMatrix ℝ
+    let B : Matrix V V ℝ := Gᶜ.adjMatrix ℝ
+    let hA : A.IsHermitian := G.isHermitian_adjMatrix ℝ
+    let hB : B.IsHermitian := Gᶜ.isHermitian_adjMatrix ℝ
+    let a : ℝ := sSup (Set.range hA.eigenvalues)
+    let b : ℝ := sSup (Set.range hB.eigenvalues)
+    change (Fintype.card V : ℝ) ≤ a + b + 1
+    have hupper : ∀ (M : Matrix V V ℝ) (hM : M.IsHermitian),
+        ((sSup (Set.range hM.eigenvalues)) • (1 : Matrix V V ℝ) - M).PosSemidef := by
+      intro M hM
+      let t : ℝ := sSup (Set.range hM.eigenvalues)
+      change (t • (1 : Matrix V V ℝ) - M).PosSemidef
+      have ht : ∀ i, hM.eigenvalues i ≤ t := by
+        intro i
+        exact le_csSup (Set.finite_range hM.eigenvalues).bddAbove (Set.mem_range_self i)
+      have hd : (t • (1 : Matrix V V ℝ) -
+          Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)).PosSemidef := by
+        rw [← Matrix.diagonal_one, ← Matrix.diagonal_smul, Matrix.diagonal_sub]
+        apply Matrix.PosSemidef.diagonal
+        intro i
+        simpa only [Pi.sub_apply, Pi.smul_apply, Pi.zero_apply, smul_eq_mul,
+          mul_one, Function.comp_apply, RCLike.ofReal_real_eq_id, id_eq]
+          using sub_nonneg.mpr (ht i)
+      let C := Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) hM.eigenvectorUnitary
+      have hC : C (Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)) = M :=
+        hM.spectral_theorem.symm
+      have heq : t • (1 : Matrix V V ℝ) - M =
+          C (t • (1 : Matrix V V ℝ) -
+            Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)) := by
+        rw [map_sub, map_smul, map_one, hC]
+      rw [heq]
+      change ((hM.eigenvectorUnitary : Matrix V V ℝ) *
+        (t • (1 : Matrix V V ℝ) -
+          Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)) *
+        Matrix.conjTranspose (hM.eigenvectorUnitary : Matrix V V ℝ)).PosSemidef
+      exact hd.mul_mul_conjTranspose_same _
+    have hsum : (1 : Matrix V V ℝ) + A + B = Matrix.of 1 := by
+      simpa only [A, B, G.compl_adjMatrix_eq_adjMatrix_compl ℝ] using
+        G.one_add_adjMatrix_add_compl_adjMatrix_eq_of_one ℝ
+    have htotal : ((a + b + 1) • (1 : Matrix V V ℝ) -
+        Matrix.of 1).PosSemidef := by
+      have heq : (a + b + 1) • (1 : Matrix V V ℝ) - Matrix.of 1 =
+          (a • (1 : Matrix V V ℝ) - A) +
+            (b • (1 : Matrix V V ℝ) - B) := by
+        rw [← hsum, add_smul, add_smul, one_smul]
+        abel
+      rw [heq]
+      exact (hupper A hA).add (hupper B hB)
+    have hones : Matrix.mulVec (Matrix.of 1 : Matrix V V ℝ) (1 : V → ℝ) =
+        (Fintype.card V : ℝ) • (1 : V → ℝ) := by
+      ext i
+      simp [Matrix.mulVec, dotProduct, Matrix.of_apply]
+    have hnonneg : 0 ≤ (a + b + 1) * (Fintype.card V : ℝ) -
+        (Fintype.card V : ℝ) * (Fintype.card V : ℝ) := by
+      simpa only [star_trivial, Matrix.sub_mulVec, Matrix.smul_mulVec,
+        Matrix.one_mulVec, hones, dotProduct_sub, dotProduct_smul,
+        one_dotProduct_one, smul_eq_mul]
+        using htotal.dotProduct_mulVec_nonneg (1 : V → ℝ)
+    have hprod : 0 ≤ ((a + b + 1) - (Fintype.card V : ℝ)) *
+        (Fintype.card V : ℝ) := by
+      simpa only [sub_mul] using hnonneg
+    have hpos : (0 : ℝ) < (Fintype.card V : ℝ) := by
+      exact_mod_cast Nat.pos_of_ne_zero hn
+    exact sub_nonneg.mp ((mul_nonneg_iff_of_pos_right hpos).mp hprod)
+
+theorem model_df1156dc814ca602e6d4 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((Fintype.card V : ℝ) ≥ (29999999 / 10000000 : ℝ)) ∧ ((if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ)) < (19999999 / 10000000 : ℝ)))) :
+    ((Fintype.card V : ℝ) * ((((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) + (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues))) - ((Fintype.card V : ℝ) - (1 : ℝ))) * (((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) + (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues))) + (1 : ℝ)))) ≥ ((3 : ℝ) * (((G.maxDegree : ℝ) - (G.minDegree : ℝ)) ^ 2)) := by
+  classical
+  have hn3 : 3 ≤ Fintype.card V := by
+    by_contra h
+    have hn2 : Fintype.card V ≤ 2 := by omega
+    have hn2R : (Fintype.card V : ℝ) ≤ 2 := by exact_mod_cast hn2
+    linarith only [hn2R, h_guard.2.1]
+  have hnzero : Fintype.card V ≠ 0 := by omega
+  letI : Nonempty V := h_guard.1.nonempty
+  letI : Nontrivial V := Fintype.one_lt_card_iff_nontrivial.mp (by omega)
+  let n : ℝ := (Fintype.card V : ℝ)
+  let a : ℝ := 2 * (G.edgeFinset.card : ℝ) / n
+  have hnpos : 0 < n := by
+    change (0 : ℝ) < (Fintype.card V : ℝ)
+    exact_mod_cast Nat.pos_of_ne_zero hnzero
+  have havg := h_guard.2.2
+  simp only [if_neg hnzero] at havg
+  have ha_lt : a < 2 := by
+    dsimp only [a, n]
+    linarith only [havg]
+  have hm_ltR : (G.edgeFinset.card : ℝ) < n := by
+    have hh : 2 * (G.edgeFinset.card : ℝ) < 2 * n :=
+      (div_lt_iff₀ hnpos).mp ha_lt
+    linarith only [hh]
+  have hm_lt : G.edgeFinset.card < Fintype.card V := by
+    change (G.edgeFinset.card : ℝ) < (Fintype.card V : ℝ) at hm_ltR
+    exact_mod_cast hm_ltR
+  have hcard_le : Fintype.card V ≤ G.edgeFinset.card + 1 := by
+    simpa only [Nat.card_eq_fintype_card, ← G.edgeFinset_card] using
+      h_guard.1.card_vert_le_card_edgeSet_add_one
+  have hcard : G.edgeFinset.card + 1 = Fintype.card V := by omega
+  have hTree : G.IsTree := by
+    apply SimpleGraph.isTree_iff_connected_and_card.mpr
+    refine ⟨h_guard.1, ?_⟩
+    simpa only [Nat.card_eq_fintype_card, ← G.edgeFinset_card] using hcard
+  have hmin : G.minDegree = 1 := hTree.minDegree_eq_one_of_nontrivial
+  have hcardR : (G.edgeFinset.card : ℝ) + 1 = n := by
+    change (G.edgeFinset.card : ℝ) + 1 = (Fintype.card V : ℝ)
+    exact_mod_cast hcard
+  have hsum_degree : (∑ v : V, (G.degree v : ℝ)) = 2 * n - 2 := by
+    have hh : (∑ v : V, (G.degree v : ℝ)) =
+        2 * (G.edgeFinset.card : ℝ) := by
+      exact_mod_cast G.sum_degrees_eq_twice_card_edges
+    linarith only [hh, hcardR]
+  have hna : n * a = 2 * n - 2 := by
+    have hh : n * a = 2 * (G.edgeFinset.card : ℝ) := by
+      dsimp only [a]
+      rw [mul_comm n, div_mul_cancel₀ _ hnpos.ne']
+    linarith only [hh, hcardR]
+  have hmean : a = 2 - 2 / n := by
+    calc
+      a = (n * a) / n := (mul_div_cancel_left₀ a hnpos.ne').symm
+      _ = (2 * n - 2) / n := by rw [hna]
+      _ = 2 - 2 / n := by
+        rw [sub_div, mul_div_cancel_right₀ _ hnpos.ne']
+  have hupper : ∀ (M : Matrix V V ℝ) (hM : M.IsHermitian),
+      ((sSup (Set.range hM.eigenvalues)) • (1 : Matrix V V ℝ) - M).PosSemidef := by
+    intro M hM
+    let t : ℝ := sSup (Set.range hM.eigenvalues)
+    change (t • (1 : Matrix V V ℝ) - M).PosSemidef
+    have ht : ∀ i, hM.eigenvalues i ≤ t := by
+      intro i
+      exact le_csSup (Set.finite_range hM.eigenvalues).bddAbove (Set.mem_range_self i)
+    have hd : (t • (1 : Matrix V V ℝ) -
+        Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)).PosSemidef := by
+      rw [← Matrix.diagonal_one, ← Matrix.diagonal_smul, Matrix.diagonal_sub]
+      apply Matrix.PosSemidef.diagonal
+      intro i
+      simpa only [Pi.sub_apply, Pi.smul_apply, Pi.zero_apply, smul_eq_mul,
+        mul_one, Function.comp_apply, RCLike.ofReal_real_eq_id, id_eq]
+        using sub_nonneg.mpr (ht i)
+    let C := Unitary.conjStarAlgAut ℝ (Matrix V V ℝ) hM.eigenvectorUnitary
+    have hC : C (Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)) = M :=
+      hM.spectral_theorem.symm
+    have heq : t • (1 : Matrix V V ℝ) - M =
+        C (t • (1 : Matrix V V ℝ) -
+          Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)) := by
+      rw [map_sub, map_smul, map_one, hC]
+    rw [heq]
+    change ((hM.eigenvectorUnitary : Matrix V V ℝ) *
+      (t • (1 : Matrix V V ℝ) -
+        Matrix.diagonal (RCLike.ofReal ∘ hM.eigenvalues)) *
+      Matrix.conjTranspose (hM.eigenvectorUnitary : Matrix V V ℝ)).PosSemidef
+    exact hd.mul_mul_conjTranspose_same _
+  have hquad (H : SimpleGraph V) [DecidableRel H.Adj] (f : V → ℝ) :
+      dotProduct f (Matrix.mulVec (H.adjMatrix ℝ) f) ≤
+        sSup (Set.range (H.isHermitian_adjMatrix ℝ).eigenvalues) * dotProduct f f := by
+    have hh : 0 ≤
+        sSup (Set.range (H.isHermitian_adjMatrix ℝ).eigenvalues) * dotProduct f f -
+          dotProduct f (Matrix.mulVec (H.adjMatrix ℝ) f) := by
+      simpa only [star_trivial, Matrix.sub_mulVec, Matrix.smul_mulVec,
+        Matrix.one_mulVec, dotProduct_sub, dotProduct_smul, smul_eq_mul] using
+        (hupper (H.adjMatrix ℝ) (H.isHermitian_adjMatrix ℝ)).dotProduct_mulVec_nonneg f
+    exact sub_nonneg.mp hh
+  let A : Matrix V V ℝ := G.adjMatrix ℝ
+  let B : Matrix V V ℝ := Gᶜ.adjMatrix ℝ
+  let r : ℝ := sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)
+  let b : ℝ := sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues)
+  let s : ℝ := r + b
+  let t : ℝ := s + 1
+  let D : ℝ := (G.maxDegree : ℝ)
+  let x : V → ℝ := 1
+  let y : V → ℝ := fun v => (G.degree v : ℝ) - a
+  let z : ℝ := dotProduct y y
+  simp only [if_neg hnzero, hmin, Nat.cast_one]
+  change 3 * (D - 1) ^ 2 ≤ n * ((s - (n - 1)) * (s + 1))
+  have hxx : dotProduct x x = n := by
+    simp [x, dotProduct, n]
+  have hxy : dotProduct x y = 0 := by
+    dsimp only [x, y]
+    simp only [dotProduct, Pi.one_apply, one_mul, Finset.sum_sub_distrib,
+      Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    change (∑ v : V, (G.degree v : ℝ)) - n * a = 0
+    rw [hsum_degree, hna]
+    simp
+  have hyx : dotProduct y x = 0 := by
+    rw [dotProduct_comm]
+    exact hxy
+  have hzz : dotProduct y y = z := rfl
+  have hAx : Matrix.mulVec A x = y + a • x := by
+    ext v
+    simp [A, x, y, SimpleGraph.adjMatrix_mulVec_apply,
+      SimpleGraph.card_neighborFinset_eq_degree]
+  have hAxx : dotProduct x (Matrix.mulVec A x) = n * a := by
+    rw [hAx, dotProduct_add, dotProduct_smul, hxy, hxx]
+    simp only [smul_eq_mul, zero_add]
+    ring
+  have hAyx : dotProduct y (Matrix.mulVec A x) = z := by
+    rw [hAx]
+    simp [dotProduct_add, dotProduct_smul, hyx, z]
+  have hAxy : dotProduct x (Matrix.mulVec A y) = z := by
+    rw [(G.isSymm_adjMatrix (α := ℝ)).dotProduct_mulVec_comm]
+    exact hAyx
+  have hsum : (1 : Matrix V V ℝ) + A + B = Matrix.of 1 := by
+    simpa only [A, B, G.compl_adjMatrix_eq_adjMatrix_compl ℝ] using
+      G.one_add_adjMatrix_add_compl_adjMatrix_eq_of_one ℝ
+  have hJx : Matrix.mulVec (Matrix.of 1 : Matrix V V ℝ) x = n • x := by
+    ext v
+    simp [x, n, Matrix.mulVec, dotProduct, Matrix.of_apply]
+  have hxsum : x + Matrix.mulVec A x + Matrix.mulVec B x = n • x := by
+    simpa only [Matrix.add_mulVec, Matrix.one_mulVec, hJx] using
+      congrArg (fun M : Matrix V V ℝ => Matrix.mulVec M x) hsum
+  have hxxsum : dotProduct x (Matrix.mulVec A x) +
+      dotProduct x (Matrix.mulVec B x) = n * (n - 1) := by
+    have hh := congrArg (fun w : V → ℝ => dotProduct x w) hxsum
+    simp only [dotProduct_add, dotProduct_smul, hxx, smul_eq_mul] at hh
+    nlinarith only [hh]
+  have hBxx : dotProduct x (Matrix.mulVec B x) = n * (n - 1 - a) := by
+    nlinarith only [hxxsum, hAxx]
+  have hysum : (∑ v : V, y v) = 0 := by
+    simpa [x, dotProduct] using hxy
+  have hJy : Matrix.mulVec (Matrix.of 1 : Matrix V V ℝ) y = 0 := by
+    ext v
+    simpa [Matrix.mulVec, dotProduct, Matrix.of_apply] using hysum
+  have hyMsum : y + Matrix.mulVec A y + Matrix.mulVec B y = 0 := by
+    simpa only [Matrix.add_mulVec, Matrix.one_mulVec, hJy] using
+      congrArg (fun M : Matrix V V ℝ => Matrix.mulVec M y) hsum
+  have hxysum : dotProduct x (Matrix.mulVec A y) +
+      dotProduct x (Matrix.mulVec B y) = 0 := by
+    have hh := congrArg (fun w : V → ℝ => dotProduct x w) hyMsum
+    simpa only [dotProduct_add, hxy, dotProduct_zero, zero_add] using hh
+  have hBxy : dotProduct x (Matrix.mulVec B y) = -z := by
+    linarith only [hxysum, hAxy]
+  have hByx : dotProduct y (Matrix.mulVec B x) = -z := by
+    rw [(Gᶜ.isSymm_adjMatrix (α := ℝ)).dotProduct_mulVec_comm]
+    exact hBxy
+  have hyysum : dotProduct y (Matrix.mulVec A y) +
+      dotProduct y (Matrix.mulVec B y) = -z := by
+    have hh := congrArg (fun w : V → ℝ => dotProduct y w) hyMsum
+    simp only [dotProduct_add, dotProduct_zero] at hh
+    change z + dotProduct y (Matrix.mulVec A y) +
+      dotProduct y (Matrix.mulVec B y) = 0 at hh
+    linarith only [hh]
+  have hrmean : a ≤ r := by
+    have hh := hquad G x
+    change dotProduct x (Matrix.mulVec A x) ≤ r * dotProduct x x at hh
+    rw [hAxx, hxx] at hh
+    have hh' : n * a ≤ n * r := by simpa only [mul_comm] using hh
+    exact le_of_mul_le_mul_left hh' hnpos
+  have horder := hull_order_le_1_nordhaus_gaddum_spectral_sum_1_914963b7a9e6 G
+  simp only [if_neg hnzero] at horder
+  change n ≤ t at horder
+  have htpos : 0 < t := lt_of_lt_of_le hnpos horder
+  have hpoly : 0 ≤ t * (n * (s - (n - 1)) * t - 4 * z) := by
+    have hqA : dotProduct (t • x + (2 : ℝ) • y)
+        (Matrix.mulVec A (t • x + (2 : ℝ) • y)) ≤
+        r * dotProduct (t • x + (2 : ℝ) • y) (t • x + (2 : ℝ) • y) :=
+      hquad G (t • x + (2 : ℝ) • y)
+    have hqB : dotProduct (t • x - (2 : ℝ) • y)
+        (Matrix.mulVec B (t • x - (2 : ℝ) • y)) ≤
+        b * dotProduct (t • x - (2 : ℝ) • y) (t • x - (2 : ℝ) • y) :=
+      hquad Gᶜ (t • x - (2 : ℝ) • y)
+    have hh := add_le_add hqA hqB
+    simp only [Matrix.mulVec_add, Matrix.mulVec_sub, Matrix.mulVec_smul,
+      add_dotProduct, sub_dotProduct, smul_dotProduct, dotProduct_add,
+      dotProduct_sub, dotProduct_smul, smul_eq_mul, hxx, hxy, hyx, hzz,
+      hAxx, hAyx, hAxy, hBxx, hBxy, hByx, zero_mul, mul_zero,
+      zero_add, add_zero, sub_zero] at hh
+    dsimp only [t, s] at hh ⊢
+    nlinarith only [hh, hyysum]
+  have hvariance : 4 * z ≤ n * (s - (n - 1)) * t := by
+    exact sub_nonneg.mp ((mul_nonneg_iff_of_pos_left htpos).mp hpoly)
+  by_cases hn4 : 4 ≤ Fintype.card V
+  · have hn4R : (4 : ℝ) ≤ n := by
+      change (4 : ℝ) ≤ (Fintype.card V : ℝ)
+      exact_mod_cast hn4
+    have hdiv : 4 / n ≤ (1 : ℝ) :=
+      (div_le_iff₀ hnpos).mpr (by simpa using hn4R)
+    have hzformula : z =
+        (∑ v : V, ((G.degree v : ℝ) - 1) * ((G.degree v : ℝ) - 2)) +
+          2 - 4 / n := by
+      have heq : z =
+          (∑ v : V, ((G.degree v : ℝ) - 1) * ((G.degree v : ℝ) - 2)) +
+            (3 - 2 * a) * (∑ v : V, (G.degree v : ℝ)) + n * (a ^ 2 - 2) := by
+        change (∑ v : V, ((G.degree v : ℝ) - a) * ((G.degree v : ℝ) - a)) = _
+        calc
+          (∑ v : V, ((G.degree v : ℝ) - a) * ((G.degree v : ℝ) - a)) =
+              ∑ v : V, (((G.degree v : ℝ) - 1) * ((G.degree v : ℝ) - 2) +
+                (3 - 2 * a) * (G.degree v : ℝ) + (a ^ 2 - 2)) := by
+            apply Finset.sum_congr rfl
+            intro v _
+            ring
+          _ = _ := by
+            simp only [Finset.sum_add_distrib, ← Finset.mul_sum,
+              Finset.sum_const, Finset.card_univ, nsmul_eq_mul, n]
+      rw [heq, hsum_degree, hmean]
+      field_simp [hnpos.ne'] <;> ring
+    have hprod_nonneg (v : V) :
+        0 ≤ ((G.degree v : ℝ) - 1) * ((G.degree v : ℝ) - 2) := by
+      have hv1 : 1 ≤ G.degree v := by
+        simpa only [hmin] using G.minDegree_le_degree v
+      by_cases hv : G.degree v = 1
+      · simp [hv]
+      · have hv2 : 2 ≤ G.degree v := by omega
+        have hv2R : (2 : ℝ) ≤ (G.degree v : ℝ) := by exact_mod_cast hv2
+        exact mul_nonneg (by linarith only [hv2R]) (by linarith only [hv2R])
+    obtain ⟨u, hu⟩ := G.exists_maximal_degree_vertex
+    have hmaxprod : (D - 1) * (D - 2) ≤
+        ∑ v : V, ((G.degree v : ℝ) - 1) * ((G.degree v : ℝ) - 2) := by
+      change ((G.maxDegree : ℝ) - 1) * ((G.maxDegree : ℝ) - 2) ≤ _
+      rw [hu]
+      exact Finset.single_le_sum (fun v _ => hprod_nonneg v) (Finset.mem_univ u)
+    have hvar_lower : (D - 1) * (D - 2) + 1 ≤ z := by
+      linarith only [hzformula, hdiv, hmaxprod]
+    have hspread : 3 * (D - 1) ^ 2 ≤ 4 * z := by
+      nlinarith only [hvar_lower, sq_nonneg (D - 3)]
+    calc
+      3 * (D - 1) ^ 2 ≤ 4 * z := hspread
+      _ ≤ n * ((s - (n - 1)) * (s + 1)) := by
+        simpa only [t, mul_assoc] using hvariance
+  · have hn_eq : Fintype.card V = 3 := by omega
+    have hnR : n = 3 := by
+      change (Fintype.card V : ℝ) = 3
+      exact_mod_cast hn_eq
+    have ha3 : a = 4 / 3 := by
+      rw [hmean, hnR]
+      norm_num
+    obtain ⟨v, hv⟩ := hTree.exists_vert_degree_one_of_nontrivial
+    have hc : Gᶜ.degree v = 1 := by
+      simpa only [hn_eq, hv] using G.degree_compl v
+    obtain ⟨w, hw⟩ := (Gᶜ.degree_pos_iff_exists_adj v).mp (by omega)
+    have hb1 : (1 : ℝ) ≤ b := by
+      let f : V → ℝ := Pi.single v 1 + Pi.single w 1
+      have hh := hquad Gᶜ f
+      change dotProduct f (Matrix.mulVec B f) ≤ b * dotProduct f f at hh
+      have hff : dotProduct f f = 2 := by
+        norm_num [f, add_dotProduct, dotProduct_add, hw.ne, hw.ne.symm]
+      have hfB : dotProduct f (Matrix.mulVec B f) = 2 := by
+        norm_num [f, B, Matrix.mulVec_add, add_dotProduct, dotProduct_add,
+          Matrix.mulVec_single_one, Matrix.col_apply, SimpleGraph.adjMatrix_apply,
+          hw, hw.symm]
+      rw [hff, hfB] at hh
+      linarith only [hh]
+    have hs3 : (7 / 3 : ℝ) ≤ s := by
+      dsimp only [s]
+      linarith only [hrmean, ha3, hb1]
+    have hD0 : 0 ≤ D := by
+      change (0 : ℝ) ≤ (G.maxDegree : ℝ)
+      exact Nat.cast_nonneg _
+    have hD2 : D ≤ 2 := by
+      have hh : G.maxDegree ≤ 2 := by
+        have hlt := G.maxDegree_lt_card_verts
+        omega
+      change (G.maxDegree : ℝ) ≤ 2
+      exact_mod_cast hh
+    have hspread : (D - 1) ^ 2 ≤ 1 := by
+      nlinarith only [mul_nonneg hD0 (sub_nonneg.mpr hD2)]
+    have hthree : (3 : ℝ) - 1 = 2 := by norm_num
+    rw [hnR, hthree]
+    nlinarith only [hs3, hspread, sq_nonneg (s - 7 / 3)]

@@ -1,0 +1,20 @@
+# Architecture
+
+The implementation keeps one research path and one committed state contract. `run_research.py` orchestrates the work; `dashboard.py` reads its output directory.
+
+1. `autonomous_math/conjecturing` proposes canonical AST relations from known targets, observed invariant envelopes, and bounded model proposals informed by committed results and counterexamples. Model JSON cannot introduce definitions, assumptions outside the reviewed guard grammar, or Lean source.
+2. `autonomous_math/sieve/instance_db.py` screens the catalog using cached exact combinatorial quantities and numerical spectra. `adversarial_holdouts.py` challenges survivors with mixed graph families. The live runner does not enable the separate legacy Z3 synthesis path.
+3. Independently replayed counterexamples join the catalog used by later cycles. Persisted invariant feedback affects subsequent sampling. Compatible checked bounds produce transitive proof targets.
+4. `autonomous_math/prover/trusted_lean.py` translates supported ASTs to genuine Mathlib definitions. `lean_prover.py` attempts fixed scripts and checked reuse, then optionally asks the authenticated Codex CLI for proof bodies and bounded compiler-guided repairs. The trusted renderer fixes the target. Accepted sources retain that exact statement, pass the permitted-axiom check, and receive content-bound receipts. Model output cannot certify itself.
+5. `autonomous_math/research_state.py` reconciles certification, handles strict JSON values, and atomically commits the complete atlas. Only committed valid proofs can enter the reusable library. An interrupted batch contributes no authoritative results.
+6. `autonomous_math/dashboard` serves one snapshot and exposes the proof library, refutations, runner state, and invariant projections. Mathematical API work is serialized so concurrent clients cannot corrupt Z3's shared context.
+
+The Python package retains the existing `autonomous_math` name to preserve its imports. `spectral_pruning` contains the qualified clique-search implementation and benchmark tools. The install includes DIMACS provenance references and the dashboard's static assets. Benchmark graph bytes are excluded; obtain them separately from the cited upstream sources subject to their terms. `certified_lean` is a separate pinned workspace; editable installation from the checkout is the supported workflow.
+
+The parent process owns random sampling, candidate identity, learning, proof-target budgets, and the only authoritative checkpoint write. Local workers screen separate candidate shards or search separate proof targets in isolated job directories. They return record deltas from an immutable committed proof context. Parent validation and stable merge order keep concurrency from overwriting the library or feeding a result into another job in the same round. New checked results and boundary graphs become shared knowledge at the next committed round.
+
+The checked proof library concerns universal graph inequalities. It does not certify Python control flow, floating-point eigensolvers, the bitmask conversion, external manuscript claims, or generated exposition. Legacy export scaffolds and conditional reference deductions have different evidence status from kernel-checked targets.
+
+The source-only migration retains the tested implementation and tests. Historical runtime records, research exports, the Mathlib shim, generated papers and tables, scratch files, old demos, and unverified synthetic benchmark files are excluded. Runtime state, checked proof sources, and baseline evidence are transferred separately and must be validated in their new location.
+
+`seed/counterexamples.json` contains 23 deduplicated learned boundary examples, not a research history. A new output directory validates their ASTs and certificates before accepting them. `library/` preserves seven foundation proof sources and their catalog. Current compiler-bound receipts and authoritative run snapshots remain runtime data; moving source-controlled knowledge alone cannot establish machine-specific certification.

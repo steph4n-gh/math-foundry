@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "scope": "Supplemental source corpus of four model-synthesized, independently kernel-replayed proofs of known graph inequalities; not the frozen seven-proof portfolio or a portable runtime proof registry.",
+  "toolchain": "leanprover/lean4:v4.34.1",
+  "mathlib_revision": "d13f23b723b8a846827a245b89c10fc7d3f11612",
+  "receipt_policy": "Machine-bound runtime receipts are not copied here. A fresh checkout requires fresh kernel replay and receipt generation before these sources can enter a trusted runtime registry.",
+  "challenge_policy": "The .challenge.lean files are exact statement templates and intentionally contain sorry. Only the corresponding .lean proof sources are checked proofs.",
+  "theorems": [
+    {
+      "id": "generative_chromatic_degree_pilot",
+      "statement": "\\chi(G) <= \\Delta(G) + 1",
+      "conjecture": {
+        "id": "generative_chromatic_degree_pilot",
+        "statement": "\\chi(G) <= \\Delta(G) + 1",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "chromatic_number"
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "binary_op",
+          "op": "+",
+          "left": {
+            "node_type": "invariant",
+            "name": "max_degree"
+          },
+          "right": {
+            "node_type": "constant",
+            "value": 1.0
+          }
+        },
+        "guard_predicate": null,
+        "complexity": 5,
+        "metadata": {
+          "novelty_status": "KNOWN_FOUNDATIONAL",
+          "origin": "generative_service_qualification"
+        }
+      },
+      "theorem_name": "generative_chromatic_degree_pilot",
+      "novelty_status": "KNOWN_MATHEMATICS",
+      "proof_origin": "codex_synthesis",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "verification": {
+        "original_kernel_status": "KERNEL_VERIFIED",
+        "statement_checked": true,
+        "independent_replay_accepted": true,
+        "independent_replay_exit_code": 0,
+        "runtime_evidence": "runs/generative_pilot/transfer/independent_replay.json"
+      },
+      "model_provenance": [
+        {
+          "round": 1,
+          "actual_model": "gpt-6-astra",
+          "configured_model": "gpt-6-astra",
+          "model_override": null,
+          "reasoning_effort": "xhigh",
+          "status": "KERNEL_REJECTED",
+          "prompt_sha256": "58d1f81347702983c9cacc4462f09955e373fb5f0675f47021bd67f8d7c25554",
+          "answer_sha256": "e0b5b20de841f9910b46ca2983070a4861f78bfb3467d84f3d149bf8cf03e712",
+          "candidate_sha256": "61cfe17270059497423530053c815f65e6a8a1be80676815ee09aba4ab0297c8"
+        },
+        {
+          "round": 2,
+          "actual_model": "gpt-6-astra",
+          "configured_model": "gpt-6-astra",
+          "model_override": null,
+          "reasoning_effort": "xhigh",
+          "status": "KERNEL_ACCEPTED",
+          "prompt_sha256": "bd548c998d029df62cafbdbb5b943998e01780206d0b064aa7cb67631dfca04b",
+          "answer_sha256": "12674dbdcf0f6ca896c8484d6981920785b375be47841e7909d58c72f9d201f5",
+          "candidate_sha256": "f2e50fbabed138112f1e02070ee1a304c5f3f3015b3e059b0456f9216b824fc1"
+        }
+      ],
+      "writeup": "Every finite simple graph can be colored with at most its maximum degree plus one colors. The proof constructs a coloring by induction on finite vertex sets: at most Delta neighbor colors are forbidden, so one of Delta + 1 colors remains available. This classical guarantee is useful when reasoning about coloring and scheduling constraints. In this corpus it also demonstrates model-generated constructive proof synthesis and a successful repair after Lean rejected the first proposal; it is known mathematics, not a new discovery.",
+      "source": "library/generated/proofs/f2e50fbabed138112f1e02070ee1a304c5f3f3015b3e059b0456f9216b824fc1.lean",
+      "source_sha256": "f2e50fbabed138112f1e02070ee1a304c5f3f3015b3e059b0456f9216b824fc1",
+      "challenge": "library/generated/proofs/f2e50fbabed138112f1e02070ee1a304c5f3f3015b3e059b0456f9216b824fc1.challenge.lean",
+      "challenge_sha256": "f6de353a6817b248a112cb1a4e66dab2e8dfb29c6c093704e425bd6ea0c4d7b4"
+    },
+    {
+      "id": "pilot_bipartite_two_colors",
+      "statement": "G \\in \\mathcal{G}_{\\text{bipartite}} ==> \\chi(G) <= 2",
+      "conjecture": {
+        "id": "pilot_bipartite_two_colors",
+        "statement": "G \\in \\mathcal{G}_{\\text{bipartite}} ==> \\chi(G) <= 2",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "chromatic_number"
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "constant",
+          "value": 2.0
+        },
+        "guard_predicate": {
+          "node_type": "guard",
+          "predicate_type": "property",
+          "property_name": "is_bipartite",
+          "negated": false,
+          "invariant": null,
+          "op": null,
+          "threshold": null,
+          "guards": null
+        },
+        "complexity": 4,
+        "metadata": {}
+      },
+      "theorem_name": "pilot_bipartite_two_colors",
+      "novelty_status": "KNOWN_MATHEMATICS",
+      "proof_origin": "codex_synthesis",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "verification": {
+        "original_kernel_status": "KERNEL_VERIFIED",
+        "statement_checked": true,
+        "independent_replay_accepted": true,
+        "independent_replay_exit_code": 0,
+        "runtime_evidence": "runs/generative_qualification/model_worker_comparison/workers_2/independent_replay.json"
+      },
+      "model_provenance": [
+        {
+          "round": 1,
+          "actual_model": "gpt-6-astra",
+          "configured_model": "gpt-6-astra",
+          "model_override": null,
+          "reasoning_effort": "xhigh",
+          "status": "KERNEL_ACCEPTED",
+          "prompt_sha256": "76438ce59987fea39af0b4fcfa7d9114fc0cbf925bd9cc85902f1df58d8452cb",
+          "answer_sha256": "10ad1ee977232beb4e896137a600c13f7f3719035837468c621a3a466946427e",
+          "candidate_sha256": "3111cf7351031dcd8aa1a48d1bdae9cc10dc1c4d24f96975d6336708bbe900e0"
+        }
+      ],
+      "writeup": "A bipartite graph needs at most two colors: its two vertex classes supply a proper coloring. The recorded bipartite guard is translated to Mathlib's G.Colorable 2, and the checked proof converts that colorability witness into the stated chromatic-number bound. This elementary result is useful for recognizing tractable coloring cases and, here, verifies that a structural guard survives translation into the formal theorem. It is known mathematics, not a new discovery.",
+      "source": "library/generated/proofs/3111cf7351031dcd8aa1a48d1bdae9cc10dc1c4d24f96975d6336708bbe900e0.lean",
+      "source_sha256": "3111cf7351031dcd8aa1a48d1bdae9cc10dc1c4d24f96975d6336708bbe900e0",
+      "challenge": "library/generated/proofs/3111cf7351031dcd8aa1a48d1bdae9cc10dc1c4d24f96975d6336708bbe900e0.challenge.lean",
+      "challenge_sha256": "6823aa5fa9077061178511887c2ecf762df9878e63e313732c63b7518976a98c"
+    },
+    {
+      "id": "pilot_independence_le_order",
+      "statement": "\\alpha(G) <= n",
+      "conjecture": {
+        "id": "pilot_independence_le_order",
+        "statement": "\\alpha(G) <= n",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "independence_number"
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "invariant",
+          "name": "order"
+        },
+        "guard_predicate": null,
+        "complexity": 3,
+        "metadata": {}
+      },
+      "theorem_name": "pilot_independence_le_order",
+      "novelty_status": "KNOWN_MATHEMATICS",
+      "proof_origin": "codex_synthesis",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "verification": {
+        "original_kernel_status": "KERNEL_VERIFIED",
+        "statement_checked": true,
+        "independent_replay_accepted": true,
+        "independent_replay_exit_code": 0,
+        "runtime_evidence": "runs/generative_qualification/model_worker_comparison/workers_2/independent_replay.json"
+      },
+      "model_provenance": [
+        {
+          "round": 1,
+          "actual_model": "gpt-6-astra",
+          "configured_model": "gpt-6-astra",
+          "model_override": null,
+          "reasoning_effort": "xhigh",
+          "status": "KERNEL_ACCEPTED",
+          "prompt_sha256": "2afb7181e096472b2bb6f69c4d65916d2ebdd3428882b122cf5e51a3e9394f24",
+          "answer_sha256": "e363c5c8af0092c0aeb9ccc70486c67205d66016e3effb49bb2ab75f9d50ecfe",
+          "candidate_sha256": "e3febcf8bf907c8a0294447029cbcea16e0db1e3a2ef8b5a5a4da59fbea37af8"
+        }
+      ],
+      "writeup": "An independent set cannot contain more vertices than the graph itself, so the independence number is at most the graph order. The checked source represents independence as clique number in the complement graph and applies the existing certified clique-number bound to that complement. The bound is elementary; its value here is demonstrating correct complement semantics and reuse of a checked theorem on a transformed graph, rather than another arithmetic combination of facts about the same graph. It is known mathematics, not a new discovery.",
+      "source": "library/generated/proofs/e3febcf8bf907c8a0294447029cbcea16e0db1e3a2ef8b5a5a4da59fbea37af8.lean",
+      "source_sha256": "e3febcf8bf907c8a0294447029cbcea16e0db1e3a2ef8b5a5a4da59fbea37af8",
+      "challenge": "library/generated/proofs/e3febcf8bf907c8a0294447029cbcea16e0db1e3a2ef8b5a5a4da59fbea37af8.challenge.lean",
+      "challenge_sha256": "b81f2b9ae3ba8272c6101d37933e8bf5150ef15424ce9627a21ebff737491b54"
+    },
+    {
+      "id": "model_e679ce9c7fa60e2c7bfd",
+      "statement": "\\chi(G) \\cdot \\left(\\chi(G) - (1)\\right) <= 2 \\cdot m",
+      "conjecture": {
+        "id": "model_e679ce9c7fa60e2c7bfd",
+        "statement": "\\chi(G) \\cdot \\left(\\chi(G) - (1)\\right) <= 2 \\cdot m",
+        "lhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "invariant",
+            "name": "chromatic_number"
+          },
+          "right": {
+            "node_type": "binary_op",
+            "op": "-",
+            "left": {
+              "node_type": "invariant",
+              "name": "chromatic_number"
+            },
+            "right": {
+              "node_type": "constant",
+              "value": 1.0
+            }
+          }
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "constant",
+            "value": 2.0
+          },
+          "right": {
+            "node_type": "invariant",
+            "name": "size"
+          }
+        },
+        "guard_predicate": null,
+        "complexity": 9,
+        "metadata": {
+          "origin": "codex_proposal",
+          "explanation": "Propose χ(G)(χ(G)−1) ≤ 2m, strengthening the recorded clique–edge inequality to bound chromatic number using edge count. The proposed proof counts pairs of color classes in an optimal coloring: each pair must have an edge between them, since otherwise they could be merged, and distinct pairs require distinct edges. The formulation also accommodates the empty graph.",
+          "literature_status": "UNREVIEWED"
+        }
+      },
+      "theorem_name": "model_e679ce9c7fa60e2c7bfd",
+      "novelty_status": "KNOWN_MATHEMATICS",
+      "proof_origin": "codex_synthesis",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "verification": {
+        "original_kernel_status": "KERNEL_VERIFIED",
+        "statement_checked": true,
+        "independent_replay_accepted": true,
+        "independent_replay_exit_code": 0,
+        "runtime_evidence": "runs/generative_qualification/live_first_proof_replay.json",
+        "committed_atlas_iteration": 16
+      },
+      "model_provenance": [
+        {
+          "round": 1,
+          "actual_model": "gpt-6-astra",
+          "configured_model": "gpt-6-astra",
+          "model_override": null,
+          "reasoning_effort": "xhigh",
+          "status": "KERNEL_ACCEPTED",
+          "prompt_sha256": "4989871ae78cabdcdfd48063cbcc879f2d9999bb940f73dc069cd557bd3a1528",
+          "answer_sha256": "33ac9ed80dd01f5117a4881b2d0bd9f328af3a2307cfcf0bf5705c1c22bef1bf",
+          "candidate_sha256": "5062e8b1c67dc97af3397ffffc6edb836e619942d83f240398f014cff6f3f831"
+        }
+      ],
+      "writeup": "This known graph-coloring bound says that a finite graph requiring k colors must contain at least k(k−1)/2 edges. The checked proof forms the graph on the color classes of an optimal coloring, shows that graph is complete, and maps the original directed edges onto its directed edges. It then applies the previously checked clique–edge bound to that color graph. The result gives an edge-count upper bound on chromatic number and demonstrates substantive reuse: a clique theorem becomes a coloring theorem through a new graph construction. This is a verified proof of a known result, with no novelty or solver-speed claim.",
+      "writeup_status": "SOURCE_INSPECTED_KNOWN_RESULT_NO_NOVELTY_CLAIM",
+      "proof_mechanism": {
+        "target_body_lines": 31,
+        "native_bridge_declarations": [
+          "SimpleGraph.chromaticNumber_mono_of_hom",
+          "SimpleGraph.eq_top_of_chromaticNumber_eq_card",
+          "SimpleGraph.map_adj'",
+          "Fintype.card_le_of_surjective",
+          "SimpleGraph.dart_card_eq_twice_card_edges"
+        ],
+        "direct_library_reuse": {
+          "theorem": "clique_edges_density_bound",
+          "applied_to": "H = G.map c on Fin G.chromaticNumber.toNat"
+        },
+        "greedy_coloring_bound_used_in_target_body": false
+      },
+      "source": "library/generated/proofs/5062e8b1c67dc97af3397ffffc6edb836e619942d83f240398f014cff6f3f831.lean",
+      "source_sha256": "5062e8b1c67dc97af3397ffffc6edb836e619942d83f240398f014cff6f3f831",
+      "challenge": "library/generated/proofs/5062e8b1c67dc97af3397ffffc6edb836e619942d83f240398f014cff6f3f831.challenge.lean",
+      "challenge_sha256": "d478c4556de48fe3f45116b8a9ac356a8451ed2058564f71eaa9c334554e8364"
+    }
+  ]
+}

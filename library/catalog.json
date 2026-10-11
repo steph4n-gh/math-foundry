@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "scope": "Known graph bounds with independently replayed Lean sources; no novelty claim",
+  "theorems": [
+    {
+      "id": "archetype_chi_ge_omega",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad \\chi(G) \\ge \\omega(G)",
+      "conjecture": {
+        "id": "archetype_chi_ge_omega",
+        "statement": "chromatic_number >= clique_number",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "chromatic_number"
+        },
+        "rel": ">=",
+        "rhs_expr": {
+          "node_type": "invariant",
+          "name": "clique_number"
+        },
+        "guard_predicate": null,
+        "complexity": 3,
+        "metadata": {
+          "archetype": "Basic",
+          "ground_truth": true
+        }
+      },
+      "source": "library/proofs/9c811cc19988fc3c8cfaf48a9f85fa1461ca632847cdac0b138dafbc2e1a79ad.lean",
+      "challenge": "library/proofs/9c811cc19988fc3c8cfaf48a9f85fa1461ca632847cdac0b138dafbc2e1a79ad.challenge.lean",
+      "source_sha256": "9c811cc19988fc3c8cfaf48a9f85fa1461ca632847cdac0b138dafbc2e1a79ad"
+    },
+    {
+      "id": "chromatic_le_order",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad \\chi(G) \\le n",
+      "conjecture": {
+        "id": "chromatic_le_order",
+        "statement": "\\chi(G) <= n",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "chromatic_number"
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "invariant",
+          "name": "order"
+        },
+        "guard_predicate": null,
+        "complexity": 3,
+        "metadata": {}
+      },
+      "source": "library/proofs/dfa8e9aa62928ad38607dd4c8f777217c8667fd6cbb4193b37062304df537824.lean",
+      "challenge": "library/proofs/dfa8e9aa62928ad38607dd4c8f777217c8667fd6cbb4193b37062304df537824.challenge.lean",
+      "source_sha256": "dfa8e9aa62928ad38607dd4c8f777217c8667fd6cbb4193b37062304df537824"
+    },
+    {
+      "id": "composed_2cd2dd810fbb9720",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad \\omega(G) \\le n",
+      "conjecture": {
+        "id": "composed_2cd2dd810fbb9720",
+        "statement": "\\omega(G) <= n",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "clique_number"
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "invariant",
+          "name": "order"
+        },
+        "guard_predicate": null,
+        "complexity": 3,
+        "metadata": {
+          "origin": "checked_transitivity",
+          "parents": [
+            "archetype_chi_ge_omega",
+            "chromatic_le_order"
+          ]
+        }
+      },
+      "source": "library/proofs/4dac2d29aacf1ba9aa9f827ef20d8bdb1802ea819f2c0dc4d3f855c03d51c336.lean",
+      "challenge": "library/proofs/4dac2d29aacf1ba9aa9f827ef20d8bdb1802ea819f2c0dc4d3f855c03d51c336.challenge.lean",
+      "source_sha256": "4dac2d29aacf1ba9aa9f827ef20d8bdb1802ea819f2c0dc4d3f855c03d51c336"
+    },
+    {
+      "id": "degree_sum_density_bound",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad 2 \\cdot m \\le n \\cdot \\Delta(G)",
+      "conjecture": {
+        "id": "degree_sum_density_bound",
+        "statement": "2 \\cdot m <= n \\cdot \\Delta(G)",
+        "lhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "constant",
+            "value": 2.0
+          },
+          "right": {
+            "node_type": "invariant",
+            "name": "size"
+          }
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "invariant",
+            "name": "order"
+          },
+          "right": {
+            "node_type": "invariant",
+            "name": "max_degree"
+          }
+        },
+        "guard_predicate": null,
+        "complexity": 7,
+        "metadata": {
+          "origin": "known_foundational_bound",
+          "novelty_status": "KNOWN_FOUNDATIONAL",
+          "scope": "all finite simple undirected graphs",
+          "writeup": "Every edge contributes two to the total degree, while each of the n vertices has degree at most \u0394, so 2m \u2264 n\u0394. This known density bound connects the total edge count to a local maximum degree. It provides a quick consistency check and a reusable bridge between edge-count and degree-based clique bounds; it does not assert that a new theorem was discovered.",
+          "provenance": "degree counting using pinned genuine Mathlib finite graph definitions"
+        }
+      },
+      "source": "library/proofs/109978ea304852ecfea4a12bd3f3876142e7a9af22a37801e8b6764d1535fe9e.lean",
+      "challenge": "library/proofs/109978ea304852ecfea4a12bd3f3876142e7a9af22a37801e8b6764d1535fe9e.challenge.lean",
+      "source_sha256": "109978ea304852ecfea4a12bd3f3876142e7a9af22a37801e8b6764d1535fe9e"
+    },
+    {
+      "id": "clique_le_max_degree_plus_one",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad \\omega(G) \\le \\Delta(G) + 1",
+      "conjecture": {
+        "id": "clique_le_max_degree_plus_one",
+        "statement": "\\omega(G) <= \\Delta(G) + 1",
+        "lhs_expr": {
+          "node_type": "invariant",
+          "name": "clique_number"
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "binary_op",
+          "op": "+",
+          "left": {
+            "node_type": "invariant",
+            "name": "max_degree"
+          },
+          "right": {
+            "node_type": "constant",
+            "value": 1.0
+          }
+        },
+        "guard_predicate": null,
+        "complexity": 5,
+        "metadata": {
+          "origin": "known_foundational_bound",
+          "novelty_status": "KNOWN_FOUNDATIONAL",
+          "scope": "all finite simple undirected graphs",
+          "writeup": "A clique of size \u03c9 forces each of its vertices to have at least \u03c9\u22121 neighbors. Consequently \u03c9 \u2264 \u0394+1 for every finite simple graph, including an empty graph. This familiar bound turns the cheaply computed maximum degree into a certified ceiling on clique size, which an exact clique solver can use to rule out branches that cannot improve its best witness.",
+          "provenance": "degree counting using pinned genuine Mathlib finite graph definitions"
+        }
+      },
+      "source": "library/proofs/3d0ed77fed9eb05fec363b447e8e7f384cf2f8cce90fb8765dbba2a82e1f4ebd.lean",
+      "challenge": "library/proofs/3d0ed77fed9eb05fec363b447e8e7f384cf2f8cce90fb8765dbba2a82e1f4ebd.challenge.lean",
+      "source_sha256": "3d0ed77fed9eb05fec363b447e8e7f384cf2f8cce90fb8765dbba2a82e1f4ebd"
+    },
+    {
+      "id": "clique_edges_density_bound",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad \\omega(G) \\cdot \\omega(G) - (1) \\le 2 \\cdot m",
+      "conjecture": {
+        "id": "clique_edges_density_bound",
+        "statement": "\\omega(G) \\cdot \\omega(G) - (1) <= 2 \\cdot m",
+        "lhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "invariant",
+            "name": "clique_number"
+          },
+          "right": {
+            "node_type": "binary_op",
+            "op": "-",
+            "left": {
+              "node_type": "invariant",
+              "name": "clique_number"
+            },
+            "right": {
+              "node_type": "constant",
+              "value": 1.0
+            }
+          }
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "constant",
+            "value": 2.0
+          },
+          "right": {
+            "node_type": "invariant",
+            "name": "size"
+          }
+        },
+        "guard_predicate": null,
+        "complexity": 9,
+        "metadata": {
+          "origin": "known_foundational_bound",
+          "novelty_status": "KNOWN_FOUNDATIONAL",
+          "scope": "all finite simple undirected graphs",
+          "writeup": "A clique of size \u03c9 contains every pair of its vertices as an edge, so the whole graph must contain at least \u03c9(\u03c9\u22121)/2 edges. The checked inequality \u03c9(\u03c9\u22121) \u2264 2m gives a global upper bound on clique size from the edge count alone. Its practical value is an inexpensive, sound pruning rule for sparse candidate subgraphs; this is a known combinatorial fact, and any solver speedup must still be measured.",
+          "provenance": "degree counting using pinned genuine Mathlib finite graph definitions"
+        }
+      },
+      "source": "library/proofs/d5edc340a5254cfb6b965330c445ceea26b638da6a43764e446eb12eb1f740e3.lean",
+      "challenge": "library/proofs/d5edc340a5254cfb6b965330c445ceea26b638da6a43764e446eb12eb1f740e3.challenge.lean",
+      "source_sha256": "d5edc340a5254cfb6b965330c445ceea26b638da6a43764e446eb12eb1f740e3"
+    },
+    {
+      "id": "composed_b214f1e86200a2e1",
+      "statement": "\\forall G \\in \\mathcal{G}, \\quad \\omega(G) \\cdot \\omega(G) - (1) \\le n \\cdot \\Delta(G)",
+      "conjecture": {
+        "id": "composed_b214f1e86200a2e1",
+        "statement": "\\omega(G) \\cdot \\omega(G) - (1) <= n \\cdot \\Delta(G)",
+        "lhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "invariant",
+            "name": "clique_number"
+          },
+          "right": {
+            "node_type": "binary_op",
+            "op": "-",
+            "left": {
+              "node_type": "invariant",
+              "name": "clique_number"
+            },
+            "right": {
+              "node_type": "constant",
+              "value": 1.0
+            }
+          }
+        },
+        "rel": "<=",
+        "rhs_expr": {
+          "node_type": "binary_op",
+          "op": "*",
+          "left": {
+            "node_type": "invariant",
+            "name": "order"
+          },
+          "right": {
+            "node_type": "invariant",
+            "name": "max_degree"
+          }
+        },
+        "guard_predicate": null,
+        "complexity": 9,
+        "metadata": {
+          "origin": "checked_transitivity",
+          "parents": [
+            "clique_edges_density_bound",
+            "degree_sum_density_bound"
+          ]
+        }
+      },
+      "source": "library/proofs/3f3d1a0c27d82cdef9129b5414ab84db31d8d37203cc110c09cf0359e1277243.lean",
+      "challenge": "library/proofs/3f3d1a0c27d82cdef9129b5414ab84db31d8d37203cc110c09cf0359e1277243.challenge.lean",
+      "source_sha256": "3f3d1a0c27d82cdef9129b5414ab84db31d8d37203cc110c09cf0359e1277243"
+    }
+  ]
+}

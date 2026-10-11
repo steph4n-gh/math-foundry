@@ -1,0 +1,27 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.coverage
+.coverage.*
+htmlcov/
+certified_lean/.lake/
+research_outputs/
+runs/
+artifacts/
+exports/
+.writer.lock
+spectral_pruning/synthetic_data/
+spectral_pruning/benchmark_results/
+spectral_pruning/qualified_benchmark_results/
+
+# Downloaded optional third-party benchmark data are not redistributed.
+spectral_pruning/dimacs_data/*.clq

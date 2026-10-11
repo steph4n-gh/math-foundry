@@ -1,0 +1,238 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Constructions
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+
+theorem hull3d_order_le_1_0_size_estrada_index_1_is_connected_982287c31193 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Connected)) :
+    (Fintype.card V : ℝ) ≤ ((G.edgeFinset.card : ℝ) + (1 : ℝ)) := by
+  have h : Fintype.card V ≤ G.edgeFinset.card + 1 := by
+    simpa only [Nat.card_eq_fintype_card, SimpleGraph.edgeFinset_card] using
+      h_guard.card_vert_le_card_edgeSet_add_one
+  exact_mod_cast h
+
+theorem parity_code_dimension_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have hn : Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) ≤ Fintype.card V := by
+    calc
+      _ ≤ Module.finrank (ZMod 2) (V → ZMod 2) := Submodule.finrank_le _
+      _ = Fintype.card V := Module.finrank_fintype_fun_eq_card (ZMod 2)
+  exact_mod_cast hn
+
+theorem pilot_independence_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Gᶜ.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  classical
+  exact composed_2cd2dd810fbb9720 (Gᶜ)
+
+theorem model_f625da6cfd36c5bd35d9 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) + ((2 : ℝ) * ((Int.floor ((G.cliqueNum : ℝ) / (2 : ℝ))) : ℝ))) ≤ (Fintype.card V : ℝ) := by
+  classical
+  let A : (V → ZMod 2) →ₗ[ZMod 2] (V → ZMod 2) :=
+    (G.adjMatrix (ZMod 2)).mulVecLin
+  let K : Submodule (ZMod 2) (V → ZMod 2) := LinearMap.ker A
+  let q : ℕ := G.cliqueNum / 2
+  obtain ⟨c, hc⟩ := G.exists_isNClique_cliqueNum
+  have hq : 2 * q ≤ c.card := by
+    rw [hc.card_eq]
+    dsimp only [q]
+    omega
+  obtain ⟨s, hsc, hscard⟩ := Finset.exists_subset_card_eq (s := c) (n := 2 * q) hq
+  have hsclique : G.IsClique (s : Set V) := by
+    intro v hv w hw hne
+    exact hc.isClique (hsc hv) (hsc hw) hne
+  have htwo : (2 : ZMod 2) = 0 := by decide
+  have hzero (x : V → ZMod 2) (hx : A x = 0)
+      (hout : ∀ v : V, v ∉ s → x v = 0) : x = 0 := by
+    let z : ZMod 2 := ∑ w ∈ s, x w
+    have hrow (v : V) (hv : v ∈ s) :
+        A x v = ∑ w ∈ s.erase v, x w := by
+      change (∑ w : V, (G.adjMatrix (ZMod 2)) v w * x w) = _
+      calc
+        _ = ∑ w ∈ s.erase v, (G.adjMatrix (ZMod 2)) v w * x w := by
+          symm
+          apply Finset.sum_subset (Finset.subset_univ (s.erase v))
+          intro w _ hw
+          by_cases hws : w ∈ s
+          · have hwv : w = v := by
+              by_contra hne
+              exact hw (Finset.mem_erase.mpr ⟨hne, hws⟩)
+            subst w
+            simp
+          · rw [hout w hws, mul_zero]
+        _ = ∑ w ∈ s.erase v, x w := by
+          apply Finset.sum_congr rfl
+          intro w hw
+          have hw' := Finset.mem_erase.mp hw
+          have hadj : G.Adj v w := hsclique hv hw'.2 (Ne.symm hw'.1)
+          simp [hadj]
+    have hval (v : V) (hv : v ∈ s) : x v = z := by
+      have hr : (∑ w ∈ s.erase v, x w) = 0 := by
+        have hh := congrFun hx v
+        rw [hrow v hv] at hh
+        exact hh
+      have hh := Finset.sum_erase_add s x hv
+      rw [hr, zero_add] at hh
+      exact hh
+    have hz : z = 0 := by
+      calc
+        z = ∑ w ∈ s, z := Finset.sum_congr rfl (fun w hw => hval w hw)
+        _ = (s.card : ZMod 2) * z := by
+          rw [Finset.sum_const, nsmul_eq_mul]
+        _ = 0 := by
+          rw [hscard, Nat.cast_mul, Nat.cast_ofNat, htwo, zero_mul, zero_mul]
+    funext v
+    by_cases hv : v ∈ s
+    · exact (hval v hv).trans hz
+    · exact hout v hv
+  let p : K →ₗ[ZMod 2] ((sᶜ : Finset V) → ZMod 2) :=
+    { toFun := fun x v => (x : V → ZMod 2) v.1
+      map_add' := by intro x y; rfl
+      map_smul' := by intro a x; rfl }
+  have hinj : Function.Injective p := by
+    intro x y hxy
+    apply Subtype.ext
+    have hx : A (x : V → ZMod 2) = 0 := x.property
+    have hy : A (y : V → ZMod 2) = 0 := y.property
+    have hker : A ((x : V → ZMod 2) - (y : V → ZMod 2)) = 0 := by
+      rw [map_sub, hx, hy, sub_self]
+    have hout : ∀ v : V, v ∉ s →
+        ((x : V → ZMod 2) - (y : V → ZMod 2)) v = 0 := by
+      intro v hv
+      have hh := congrFun hxy ⟨v, Finset.mem_compl.mpr hv⟩
+      change (x : V → ZMod 2) v = (y : V → ZMod 2) v at hh
+      simp only [Pi.sub_apply, hh, sub_self]
+    exact sub_eq_zero.mp (hzero _ hker hout)
+  have hdim : Module.finrank (ZMod 2) K ≤ (sᶜ).card := by
+    calc
+      _ ≤ Module.finrank (ZMod 2) ((sᶜ : Finset V) → ZMod 2) :=
+        LinearMap.finrank_le_finrank_of_injective hinj
+      _ = (sᶜ).card := by
+        rw [Module.finrank_fintype_fun_eq_card, Fintype.card_coe]
+  have hcount : s.card + (sᶜ).card = Fintype.card V :=
+    Finset.card_add_card_compl s
+  have hnat : Module.finrank (ZMod 2) K + 2 * q ≤ Fintype.card V := by
+    omega
+  have hfloor : Int.floor ((G.cliqueNum : ℝ) / 2) = (q : ℤ) := by
+    apply Int.floor_eq_iff.mpr
+    have hlo : 2 * q ≤ G.cliqueNum := by
+      dsimp only [q]
+      omega
+    have hhi : G.cliqueNum < 2 * (q + 1) := by
+      dsimp only [q]
+      omega
+    have hloR : (2 : ℝ) * (q : ℝ) ≤ (G.cliqueNum : ℝ) := by
+      exact_mod_cast hlo
+    have hhiR : (G.cliqueNum : ℝ) < (2 : ℝ) * ((q : ℝ) + 1) := by
+      exact_mod_cast hhi
+    constructor <;> simp only [Int.cast_natCast] <;> linarith only [hloR, hhiR]
+  change (Module.finrank (ZMod 2) K : ℝ) +
+    (2 : ℝ) * (Int.floor ((G.cliqueNum : ℝ) / 2) : ℝ) ≤ (Fintype.card V : ℝ)
+  rw [hfloor, Int.cast_natCast]
+  exact_mod_cast hnat
+theorem hull3d_order_ge_0_0_5_laplacian_spectral_radius_signless_laplacian_spectral_radius_1_is_connected_d400e6f639cf {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Connected)) :
+    (Fintype.card V : ℝ) ≥ (((1 / 2 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range ((G.isHermitian_degMatrix ℝ).add (G.isHermitian_adjMatrix ℝ)).eigenvalues))) + (1 : ℝ)) := by
+  classical
+  letI : Nonempty V := h_guard.nonempty
+  have hcard : Fintype.card V ≠ 0 := Fintype.card_ne_zero
+  let Q : Matrix V V ℝ := G.degMatrix ℝ + G.adjMatrix ℝ
+  let hQ : Q.IsHermitian :=
+    (G.isHermitian_degMatrix ℝ).add (G.isHermitian_adjMatrix ℝ)
+  have hbound : ∀ i : V,
+      hQ.eigenvalues i ≤ 2 * ((Fintype.card V : ℝ) - 1) := by
+    intro i
+    let x : V → ℝ := ⇑(hQ.eigenvectorBasis i)
+    have hx : x ≠ 0 :=
+      (WithLp.ofLp_eq_zero 2).ne.2 (hQ.eigenvectorBasis.orthonormal.ne_zero i)
+    obtain ⟨v, _, hmax⟩ :=
+      Finset.exists_max_image Finset.univ (fun w : V => |x w|)
+        Finset.univ_nonempty
+    have hm : 0 < |x v| := by
+      obtain ⟨w, hw⟩ := Function.ne_iff.mp hx
+      exact (abs_pos.mpr hw).trans_le (hmax w (Finset.mem_univ w))
+    have heig : Matrix.mulVec Q x = (hQ.eigenvalues i) • x :=
+      hQ.mulVec_eigenvectorBasis i
+    have hrow :
+        (G.degree v : ℝ) * x v + (∑ w ∈ G.neighborFinset v, x w) =
+          hQ.eigenvalues i * x v := by
+      simpa only [Q, Matrix.add_mulVec, Pi.add_apply,
+        SimpleGraph.degMatrix_mulVec_apply, SimpleGraph.adjMatrix_mulVec_apply,
+        Pi.smul_apply, smul_eq_mul] using congrFun heig v
+    have hsum : |∑ w ∈ G.neighborFinset v, x w| ≤
+        (G.degree v : ℝ) * |x v| := by
+      calc
+        _ ≤ ∑ w ∈ G.neighborFinset v, |x w| :=
+          Finset.abs_sum_le_sum_abs x (G.neighborFinset v)
+        _ ≤ ∑ w ∈ G.neighborFinset v, |x v| :=
+          Finset.sum_le_sum (fun w _ => hmax w (Finset.mem_univ w))
+        _ = _ := by simp [nsmul_eq_mul]
+    have hmul : |hQ.eigenvalues i| * |x v| ≤
+        (2 : ℝ) * (G.degree v : ℝ) * |x v| := by
+      calc
+        _ = |hQ.eigenvalues i * x v| := (abs_mul _ _).symm
+        _ = |(G.degree v : ℝ) * x v + (∑ w ∈ G.neighborFinset v, x w)| :=
+          congrArg abs hrow.symm
+        _ ≤ |(G.degree v : ℝ) * x v| + |∑ w ∈ G.neighborFinset v, x w| :=
+          abs_add_le _ _
+        _ ≤ (G.degree v : ℝ) * |x v| + (G.degree v : ℝ) * |x v| := by
+          rw [abs_mul, abs_of_nonneg
+            (show (0 : ℝ) ≤ (G.degree v : ℝ) from Nat.cast_nonneg _)]
+          exact add_le_add le_rfl hsum
+        _ = _ := by ring
+    have hlambda : |hQ.eigenvalues i| ≤ (2 : ℝ) * (G.degree v : ℝ) :=
+      le_of_mul_le_mul_right hmul hm
+    have hdNat : G.degree v + 1 ≤ Fintype.card V :=
+      Nat.succ_le_of_lt (G.degree_lt_card_verts v)
+    have hd : (G.degree v : ℝ) + 1 ≤ (Fintype.card V : ℝ) := by
+      exact_mod_cast hdNat
+    calc
+      hQ.eigenvalues i ≤ |hQ.eigenvalues i| := le_abs_self _
+      _ ≤ (2 : ℝ) * (G.degree v : ℝ) := hlambda
+      _ ≤ 2 * ((Fintype.card V : ℝ) - 1) := by linarith only [hd]
+  have hs : sSup (Set.range hQ.eigenvalues) ≤
+      2 * ((Fintype.card V : ℝ) - 1) := by
+    apply csSup_le (Set.range_nonempty hQ.eigenvalues)
+    rintro _ ⟨i, rfl⟩
+    exact hbound i
+  change (1 / 2 : ℝ) *
+    (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range hQ.eigenvalues)) + 1 ≤
+      (Fintype.card V : ℝ)
+  simp only [if_neg hcard]
+  linarith only [hs]

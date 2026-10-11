@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "snapshot_checkpoint": 275,
+  "snapshot_saved_at": 1791752765.767911,
+  "certified_artifacts": 341,
+  "established_original_results": 0,
+  "scope": "Finite simple graph and adjacency-parity code inequalities. A certificate count is not a count of new mathematical discoveries.",
+  "provenance": {
+    "committed_atlas_sha256": "7d3add22f5679bfbb7309ac6736af98e28c5114ad872a17b74597062f2d87fe8",
+    "original_source_period": "source_bound_originality_screening",
+    "review_counts": {
+      "awaiting_review": 260,
+      "known_result": 27,
+      "routine_consequence": 54
+    },
+    "original_atlas_and_machine_receipts_retained_privately": true
+  },
+  "selection": "The conjecture objects preserve id, expressions, relation and complete native guard. Proposal metadata and prose are omitted; these sanitized catalog objects are not the original full receipt AST bytes. Historical receipt and full AST hashes are archival provenance, not new machine-local certificates."
+}

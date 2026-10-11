@@ -1,0 +1,169 @@
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem parity_code_unique_neighbor_distance {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (Finset V)).filter (fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w))).image Finset.card; ((weights.min' (by simp [weights]) - 1 : ℕ) : ℝ)) + (1 : ℝ)) ≤ (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ)) := by
+  classical
+  let words : Finset (V → ZMod 2) := Finset.univ.filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)
+  let stops : Finset (Finset V) := Finset.univ.filter (fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w))
+  let cw : Finset ℕ := {Fintype.card V + 1} ∪ words.image hammingNorm
+  let sw : Finset ℕ := {Fintype.card V + 1} ∪ stops.image Finset.card
+  have hcw : cw.Nonempty := by simp [cw]
+  have hsw : sw.Nonempty := by simp [sw]
+  change ((sw.min' hsw - 1 : ℕ) : ℝ) + 1 ≤ (cw.min' hcw : ℝ)
+  have hpos : 1 ≤ sw.min' hsw := by
+    apply Finset.le_min'
+    intro a ha
+    rcases Finset.mem_union.mp ha with ha | ha
+    · have : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha
+      omega
+    · obtain ⟨S, hS, rfl⟩ := Finset.mem_image.mp ha
+      exact (Finset.mem_filter.mp hS).2.1.card_pos
+  have hle : sw.min' hsw ≤ cw.min' hcw := by
+    apply Finset.le_min'
+    intro a ha
+    rcases Finset.mem_union.mp ha with ha | ha
+    · have : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha
+      subst a
+      exact Finset.min'_le _ _ (by simp [sw])
+    · obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp ha
+      have hxne : x ≠ 0 := (Finset.mem_filter.mp hx).2.1
+      have hxcode := (Finset.mem_filter.mp hx).2.2
+      let S : Finset V := Finset.univ.filter (fun w => x w ≠ 0)
+      have hSnonempty : S.Nonempty := by
+        apply Finset.card_pos.mp
+        change 0 < hammingNorm x
+        exact hammingNorm_pos_iff.mpr hxne
+      have hSstop : S ∈ stops := by
+        apply Finset.mem_filter.mpr
+        refine ⟨Finset.mem_univ _, hSnonempty, ?_⟩
+        rintro ⟨v, w, hw, hvw, hu⟩
+        have hxw : x w ≠ 0 := (Finset.mem_filter.mp hw).2
+        have heq : ∑ a ∈ G.neighborFinset v, x a = x w := by
+          apply Finset.sum_eq_single w
+          · intro a ha hne
+            by_contra hxa
+            have haS : a ∈ S := Finset.mem_filter.mpr ⟨Finset.mem_univ _, hxa⟩
+            exact hne (hu a haS ((G.mem_neighborFinset v a).mp ha))
+          · intro hnot
+            exact (hnot ((G.mem_neighborFinset v w).mpr hvw)).elim
+        have hzero : ∑ a ∈ G.neighborFinset v, x a = 0 := by
+          simpa [Matrix.mulVecLin_apply] using congrFun hxcode v
+        exact hxw (heq.symm.trans hzero)
+      apply Finset.min'_le
+      exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr ⟨S, hSstop, rfl⟩))
+  have hn : sw.min' hsw - 1 + 1 ≤ cw.min' hcw := by omega
+  exact_mod_cast hn
+
+theorem hull3d_parity_code_distance_le_0_1_unique_neighbor_radius_order_1_709dc59dd02e {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ)) ≤ ((Fintype.card V : ℝ) + (1 : ℝ)) := by
+  classical
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm
+  have hw : weights.Nonempty := by simp [weights]
+  change (weights.min' hw : ℝ) ≤ (Fintype.card V : ℝ) + 1
+  have h : weights.min' hw ≤ Fintype.card V + 1 :=
+    Finset.min'_le _ _ (by simp [weights])
+  exact_mod_cast h
+
+theorem composed_98f6a5db9b7b63f3 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (Finset V)).filter (fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w))).image Finset.card; ((weights.min' (by simp [weights]) - 1 : ℕ) : ℝ)) + (1 : ℝ)) ≤ ((Fintype.card V : ℝ) + (1 : ℝ)) := by
+  exact le_trans (parity_code_unique_neighbor_distance G) (hull3d_parity_code_distance_le_0_1_unique_neighbor_radius_order_1_709dc59dd02e G)
+theorem model_ae22b995b67aeeffd271 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (((G.maxDegree : ℝ) ≤ (20000001 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)))) :
+    (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ)) = ((let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (Finset V)).filter (fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w))).image Finset.card; ((weights.min' (by simp [weights]) - 1 : ℕ) : ℝ)) + (1 : ℝ)) := by
+  classical
+  have hdeg : G.maxDegree ≤ 2 := by
+    have hlt : (G.maxDegree : ℝ) < (3 : ℝ) :=
+      lt_of_le_of_lt h_guard.1 (by norm_num)
+    have hn : G.maxDegree < 3 := by exact_mod_cast hlt
+    omega
+  let words : Finset (V → ZMod 2) := Finset.univ.filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)
+  let stops : Finset (Finset V) := Finset.univ.filter (fun S => S.Nonempty ∧ ¬ (∃ v w, w ∈ S ∧ G.Adj v w ∧ ∀ u ∈ S, G.Adj v u → u = w))
+  let cw : Finset ℕ := {Fintype.card V + 1} ∪ words.image hammingNorm
+  let sw : Finset ℕ := {Fintype.card V + 1} ∪ stops.image Finset.card
+  have hcw : cw.Nonempty := by simp [cw]
+  have hsw : sw.Nonempty := by simp [sw]
+  have hpos : 1 ≤ sw.min' hsw := by
+    apply Finset.le_min'
+    intro a ha
+    rcases Finset.mem_union.mp ha with ha | ha
+    · have : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha
+      omega
+    · obtain ⟨S, hS, rfl⟩ := Finset.mem_image.mp ha
+      exact (Finset.mem_filter.mp hS).2.1.card_pos
+  have hreverse : cw.min' hcw ≤ sw.min' hsw := by
+    apply Finset.le_min'
+    intro a ha
+    rcases Finset.mem_union.mp ha with ha | ha
+    · have : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha
+      subst a
+      exact Finset.min'_le _ _ (by simp [cw])
+    · obtain ⟨S, hS, rfl⟩ := Finset.mem_image.mp ha
+      have hS' := (Finset.mem_filter.mp hS).2
+      let x : V → ZMod 2 := fun w => if w ∈ S then 1 else 0
+      have hweight : hammingNorm x = S.card := by
+        unfold hammingNorm
+        apply congrArg Finset.card
+        ext w
+        by_cases hw : w ∈ S <;> simp [x, hw]
+      have hxne : x ≠ 0 := by
+        apply hammingNorm_pos_iff.mp
+        rw [hweight]
+        exact hS'.1.card_pos
+      have hxker : (G.adjMatrix (ZMod 2)).mulVecLin x = 0 := by
+        funext v
+        let T : Finset V := (G.neighborFinset v).filter (fun w => w ∈ S)
+        have hTle : T.card ≤ 2 := calc
+          T.card ≤ (G.neighborFinset v).card := Finset.card_filter_le _ _
+          _ = G.degree v := G.card_neighborFinset_eq_degree v
+          _ ≤ G.maxDegree := G.degree_le_maxDegree v
+          _ ≤ 2 := hdeg
+        have hTne : T.card ≠ 1 := by
+          intro hT
+          obtain ⟨w, hw, huniq⟩ := Finset.card_eq_one_iff_existsUnique.mp hT
+          have hwN : w ∈ G.neighborFinset v := (Finset.mem_filter.mp hw).1
+          have hwS : w ∈ S := (Finset.mem_filter.mp hw).2
+          apply hS'.2
+          refine ⟨v, w, hwS, (G.mem_neighborFinset v w).mp hwN, ?_⟩
+          intro u hu hvu
+          exact huniq u (Finset.mem_filter.mpr ⟨(G.mem_neighborFinset v u).mpr hvu, hu⟩)
+        have hTcases : T.card = 0 ∨ T.card = 2 := by omega
+        rw [Matrix.mulVecLin_apply, SimpleGraph.adjMatrix_mulVec_apply]
+        change (∑ u ∈ G.neighborFinset v, if u ∈ S then (1 : ZMod 2) else 0) = 0
+        rw [Finset.sum_boole]
+        change (T.card : ZMod 2) = 0
+        rcases hTcases with hT | hT
+        · simp only [hT, Nat.cast_zero]
+        · simpa only [hT] using (ZMod.natCast_self 2)
+      have hmem : hammingNorm x ∈ cw := by
+        apply Finset.mem_union.mpr
+        right
+        apply Finset.mem_image.mpr
+        refine ⟨x, ?_, rfl⟩
+        exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hxne, hxker⟩
+      have hmin := Finset.min'_le cw (hammingNorm x) hmem
+      simpa only [hweight] using hmin
+  change (cw.min' hcw : ℝ) = ((sw.min' hsw - 1 : ℕ) : ℝ) + 1
+  apply le_antisymm
+  · have hn : cw.min' hcw ≤ sw.min' hsw - 1 + 1 := by omega
+    exact_mod_cast hn
+  · exact parity_code_unique_neighbor_distance G

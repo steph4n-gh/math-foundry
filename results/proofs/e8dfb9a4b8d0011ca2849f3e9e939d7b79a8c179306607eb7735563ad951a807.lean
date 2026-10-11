@@ -1,0 +1,237 @@
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Constructions
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem model_b0cf9d1e2a8965e241a4 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Connected) ∧ ((Fintype.card V : ℝ) ≥ (19999999 / 10000000 : ℝ)))) :
+    (letI : Decidable G.Connected := Classical.propDecidable _; if G.Connected then (if h : 2 ≤ Fintype.card V then (G.isHermitian_lapMatrix ℝ).eigenvalues₀ ⟨Fintype.card V - 2, by omega⟩ else (0 : ℝ)) else (0 : ℝ)) ≥ ((G.minDegree : ℝ) * (let D : Matrix V V ℝ := Matrix.diagonal (fun v => (Real.sqrt (G.degree v : ℝ))⁻¹); (letI : Decidable G.Connected := Classical.propDecidable _; if G.Connected then (if h : 2 ≤ Fintype.card V then (Matrix.isHermitian_mul_mul_conjTranspose D (G.isHermitian_lapMatrix ℝ)).eigenvalues₀ ⟨Fintype.card V - 2, by omega⟩ else (0 : ℝ)) else (0 : ℝ)))) := by
+  classical
+  have hn : 2 ≤ Fintype.card V := by
+    by_contra h
+    have hsmall : Fintype.card V ≤ 1 := by omega
+    have hsmallR : (Fintype.card V : ℝ) ≤ 1 := by exact_mod_cast hsmall
+    linarith only [h_guard.2, hsmallR]
+  haveI : Nonempty V := Fintype.card_pos_iff.mp (by omega)
+  haveI : Nontrivial V := Fintype.one_lt_card_iff_nontrivial.mp (by omega)
+  dsimp only
+  simp only [if_pos h_guard.1, dif_pos hn]
+  let s : V → ℝ := fun v => Real.sqrt (G.degree v : ℝ)
+  let D : Matrix V V ℝ := Matrix.diagonal (fun v => (s v)⁻¹)
+  let S : Matrix V V ℝ := Matrix.diagonal s
+  let L : Matrix V V ℝ := G.lapMatrix ℝ
+  let M : Matrix V V ℝ := D * L * D.conjTranspose
+  have hL : L.IsHermitian := G.isHermitian_lapMatrix ℝ
+  have hM : M.IsHermitian := Matrix.isHermitian_mul_mul_conjTranspose D hL
+  let e : Fin (Fintype.card V) ≃ V :=
+    Fintype.equivOfCardEq (Fintype.card_fin _)
+  let j : Fin (Fintype.card V) := ⟨Fintype.card V - 2, by omega⟩
+  let l : Fin (Fintype.card V) := ⟨Fintype.card V - 1, by omega⟩
+  let a : ℝ := hL.eigenvalues₀ j
+  let b : ℝ := hM.eigenvalues₀ j
+  change (G.minDegree : ℝ) * b ≤ a
+  have heig {A : Matrix V V ℝ} (hA : A.IsHermitian)
+      (i : Fin (Fintype.card V)) :
+      hA.eigenvalues (e i) = hA.eigenvalues₀ i := by
+    simp only [Matrix.IsHermitian.eigenvalues, e, Equiv.symm_apply_apply]
+  have hact {A : Matrix V V ℝ} (hA : A.IsHermitian) (v : V) :
+      A.toEuclideanLin (hA.eigenvectorBasis v) =
+        hA.eigenvalues v • hA.eigenvectorBasis v := by
+    apply PiLp.ext
+    intro w
+    change (Matrix.mulVec A ⇑(hA.eigenvectorBasis v)) w =
+      (hA.eigenvalues v • ⇑(hA.eigenvectorBasis v)) w
+    exact congrFun (hA.mulVec_eigenvectorBasis v) w
+  have hnn {A : Matrix V V ℝ} (hA : A.IsHermitian)
+      (hp : A.PosSemidef) (i : Fin (Fintype.card V)) :
+      0 ≤ hA.eigenvalues₀ i := by
+    rw [← heig hA i, hA.eigenvalues_eq (e i)]
+    simpa only [RCLike.re_to_real] using
+      hp.dotProduct_mulVec_nonneg (⇑(hA.eigenvectorBasis (e i)))
+  have hpL : L.PosSemidef := G.posSemidef_lapMatrix ℝ
+  have hpM : M.PosSemidef := hpL.mul_mul_conjTranspose_same D
+  have ha : 0 ≤ a := hnn hL hpL j
+  have hb : 0 ≤ b := hnn hM hpM j
+  have hprod : (∏ v : V, hL.eigenvalues v) = 0 := by
+    simpa only [RCLike.ofReal_real_eq_id, id_eq] using
+      (hL.det_eq_prod_eigenvalues.symm.trans (G.det_lapMatrix_eq_zero ℝ))
+  obtain ⟨v, _, hv⟩ := Finset.prod_eq_zero_iff.mp hprod
+  have hz : hL.eigenvalues₀ (e.symm v) = 0 := by
+    rw [← heig hL (e.symm v), Equiv.apply_symm_apply]
+    exact hv
+  have hvl : e.symm v ≤ l := by
+    change (e.symm v).val ≤ Fintype.card V - 1
+    have hlt := (e.symm v).isLt
+    omega
+  have hlast : hL.eigenvalues₀ l = 0 :=
+    le_antisymm ((hL.eigenvalues₀_antitone hvl).trans_eq hz) (hnn hL hpL l)
+  have hs (v : V) : s v ≠ 0 := by
+    have hd : 0 < G.degree v :=
+      h_guard.1.preconnected.degree_pos_of_nontrivial v
+    have hdR : (0 : ℝ) < (G.degree v : ℝ) := by exact_mod_cast hd
+    exact (Real.sqrt_ne_zero (Nat.cast_nonneg (G.degree v))).2 (ne_of_gt hdR)
+  have hsquare (v : V) : s v ^ 2 = (G.degree v : ℝ) :=
+    Real.sq_sqrt (Nat.cast_nonneg (G.degree v))
+  have hDself : D.conjTranspose = D := by
+    simp only [D, Matrix.diagonal_conjTranspose, star_trivial]
+  have hD : D.IsHermitian := hDself
+  have hDsym : D.toEuclideanLin.IsSymmetric :=
+    Matrix.isSymmetric_toEuclideanLin_iff.mpr hD
+  have hMsym : M.toEuclideanLin.IsSymmetric :=
+    Matrix.isSymmetric_toEuclideanLin_iff.mpr hM
+  have hDS (x : EuclideanSpace ℝ V) :
+      D.toEuclideanLin (S.toEuclideanLin x) = x := by
+    apply PiLp.ext
+    intro v
+    change (Matrix.mulVec D (Matrix.mulVec S ⇑x)) v = x v
+    simp only [D, S, Matrix.mulVec_diagonal]
+    rw [← mul_assoc, inv_mul_cancel₀ (hs v), one_mul]
+  have hMact (z : EuclideanSpace ℝ V) :
+      M.toEuclideanLin z = D.toEuclideanLin (L.toEuclideanLin (D.toEuclideanLin z)) := by
+    apply PiLp.ext
+    intro v
+    change (Matrix.mulVec M ⇑z) v =
+      (Matrix.mulVec D (Matrix.mulVec L (Matrix.mulVec D ⇑z))) v
+    simp only [M, hDself, Matrix.mulVec_mulVec, Matrix.mul_assoc]
+  have henergy (x : EuclideanSpace ℝ V) :
+      inner ℝ (S.toEuclideanLin x) (M.toEuclideanLin (S.toEuclideanLin x)) =
+        inner ℝ x (L.toEuclideanLin x) := by
+    rw [hMact, hDS]
+    rw [← hDsym (S.toEuclideanLin x) (L.toEuclideanLin x), hDS]
+  have hnorm (x : EuclideanSpace ℝ V) :
+      (G.minDegree : ℝ) * ‖x‖ ^ 2 ≤ ‖S.toEuclideanLin x‖ ^ 2 := by
+    simp only [EuclideanSpace.real_norm_sq_eq]
+    rw [Finset.mul_sum]
+    apply Finset.sum_le_sum
+    intro v _
+    calc
+      (G.minDegree : ℝ) * (x v) ^ 2 ≤ (G.degree v : ℝ) * (x v) ^ 2 :=
+        mul_le_mul_of_nonneg_right
+          (by exact_mod_cast G.minDegree_le_degree v) (sq_nonneg (x v))
+      _ = ((S.toEuclideanLin x) v) ^ 2 := by
+        change (G.degree v : ℝ) * (x v) ^ 2 = ((Matrix.mulVec S ⇑x) v) ^ 2
+        simp only [S, Matrix.mulVec_diagonal]
+        rw [mul_pow, hsquare v]
+  have hgap (z : EuclideanSpace ℝ V)
+      (hz : inner ℝ (hM.eigenvectorBasis (e l)) z = 0) :
+      b * ‖z‖ ^ 2 ≤ inner ℝ z (M.toEuclideanLin z) := by
+    calc
+      b * ‖z‖ ^ 2 =
+          ∑ v : V, b * (inner ℝ (hM.eigenvectorBasis v) z) ^ 2 := by
+        rw [← hM.eigenvectorBasis.sum_sq_inner_right z, Finset.mul_sum]
+      _ ≤ ∑ v : V, hM.eigenvalues v * (inner ℝ (hM.eigenvectorBasis v) z) ^ 2 := by
+        apply Finset.sum_le_sum
+        intro v _
+        by_cases hv : v = e l
+        · simp [hv, hz]
+        · apply mul_le_mul_of_nonneg_right _ (sq_nonneg _)
+          have hne : e.symm v ≠ l := by
+            intro hh
+            apply hv
+            calc
+              v = e (e.symm v) := (e.apply_symm_apply v).symm
+              _ = e l := congrArg e hh
+          have hvalne : (e.symm v).val ≠ Fintype.card V - 1 := by
+            intro hh
+            apply hne
+            exact Fin.ext hh
+          have hij : e.symm v ≤ j := by
+            change (e.symm v).val ≤ Fintype.card V - 2
+            have hlt := (e.symm v).isLt
+            omega
+          calc
+            b = hM.eigenvalues₀ j := rfl
+            _ ≤ hM.eigenvalues₀ (e.symm v) := hM.eigenvalues₀_antitone hij
+            _ = hM.eigenvalues v := by
+              simpa only [Equiv.apply_symm_apply] using (heig hM (e.symm v)).symm
+      _ = inner ℝ z (M.toEuclideanLin z) := by
+        rw [← hM.eigenvectorBasis.sum_inner_mul_inner z (M.toEuclideanLin z)]
+        apply Finset.sum_congr rfl
+        intro v _
+        rw [real_inner_comm (hM.eigenvectorBasis v) z,
+          ← hMsym (hM.eigenvectorBasis v) z, hact hM v, real_inner_smul_left]
+        ring
+  let u : EuclideanSpace ℝ V := hL.eigenvectorBasis (e j)
+  let t : EuclideanSpace ℝ V := hL.eigenvectorBasis (e l)
+  let y : EuclideanSpace ℝ V := hM.eigenvectorBasis (e l)
+  have huact : L.toEuclideanLin u = a • u := by
+    dsimp only [u, a]
+    rw [hact hL (e j), heig hL j]
+  have htact : L.toEuclideanLin t = 0 := by
+    dsimp only [t]
+    rw [hact hL (e l), heig hL l, hlast, zero_smul]
+  have hfinish (x : EuclideanSpace ℝ V) (hx : x ≠ 0)
+      (hz : inner ℝ y (S.toEuclideanLin x) = 0)
+      (hupper : inner ℝ x (L.toEuclideanLin x) ≤ a * ‖x‖ ^ 2) :
+      (G.minDegree : ℝ) * b ≤ a := by
+    have hxp : 0 < ‖x‖ ^ 2 := pow_pos (norm_pos_iff.mpr hx) 2
+    have hcompare : ((G.minDegree : ℝ) * b) * ‖x‖ ^ 2 ≤ a * ‖x‖ ^ 2 := by
+      calc
+        ((G.minDegree : ℝ) * b) * ‖x‖ ^ 2 =
+            b * ((G.minDegree : ℝ) * ‖x‖ ^ 2) := by ring
+        _ ≤ b * ‖S.toEuclideanLin x‖ ^ 2 :=
+          mul_le_mul_of_nonneg_left (hnorm x) hb
+        _ ≤ inner ℝ (S.toEuclideanLin x) (M.toEuclideanLin (S.toEuclideanLin x)) :=
+          hgap (S.toEuclideanLin x) hz
+        _ = inner ℝ x (L.toEuclideanLin x) := henergy x
+        _ ≤ a * ‖x‖ ^ 2 := hupper
+    exact (mul_le_mul_iff_left₀ hxp).mp hcompare
+  by_cases hbt : inner ℝ y (S.toEuclideanLin t) = 0
+  · apply hfinish t (hL.eigenvectorBasis.orthonormal.ne_zero (e l)) hbt
+    rw [htact, inner_zero_right]
+    exact mul_nonneg ha (sq_nonneg ‖t‖)
+  · have hjl : e j ≠ e l := by
+      intro hh
+      have hval := congrArg Fin.val (e.injective hh)
+      dsimp only [j, l] at hval
+      omega
+    have huu : inner ℝ u u = 1 := hL.eigenvectorBasis.inner_eq_one (e j)
+    have htt : inner ℝ t t = 1 := hL.eigenvectorBasis.inner_eq_one (e l)
+    have hut : inner ℝ u t = 0 := hL.eigenvectorBasis.inner_eq_zero hjl
+    have htu : inner ℝ t u = 0 := hL.eigenvectorBasis.inner_eq_zero hjl.symm
+    let c : ℝ := inner ℝ y (S.toEuclideanLin u) / inner ℝ y (S.toEuclideanLin t)
+    let x : EuclideanSpace ℝ V := u - c • t
+    have hxorth : inner ℝ y (S.toEuclideanLin x) = 0 := by
+      dsimp only [x]
+      rw [map_sub, map_smul, inner_sub_right, real_inner_smul_right]
+      dsimp only [c]
+      rw [div_mul_cancel₀ _ hbt, sub_self]
+    have hux : inner ℝ u x = 1 := by
+      dsimp only [x]
+      rw [inner_sub_right, real_inner_smul_right, huu, hut, mul_zero, sub_zero]
+    have hx : x ≠ 0 := by
+      intro hxzero
+      rw [hxzero, inner_zero_right] at hux
+      norm_num at hux
+    have hxu : inner ℝ x u = 1 := (real_inner_comm u x).trans hux
+    have hxnorm : ‖x‖ ^ 2 = 1 + c ^ 2 := by
+      rw [← real_inner_self_eq_norm_sq x]
+      dsimp only [x]
+      simp only [inner_sub_left, inner_sub_right, real_inner_smul_left,
+        real_inner_smul_right, huu, hut, htu, htt]
+      ring
+    have hxact : L.toEuclideanLin x = a • u := by
+      dsimp only [x]
+      rw [map_sub, map_smul, huact, htact, smul_zero, sub_zero]
+    apply hfinish x hx hxorth
+    rw [hxact, real_inner_smul_right, hxu, mul_one, hxnorm]
+    nlinarith only [mul_nonneg ha (sq_nonneg c)]

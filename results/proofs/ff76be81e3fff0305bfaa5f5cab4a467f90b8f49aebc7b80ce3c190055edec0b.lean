@@ -1,0 +1,107 @@
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Tactic
+import Mathlib.Analysis.Matrix.Spectrum
+import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Combinatorics.SimpleGraph.LapMatrix
+
+open scoped BigOperators
+
+theorem hull_spectral_spread_le_2_nordhaus_gaddum_spectral_sum_0_24c7f07054c7 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) - (if Fintype.card V = 0 then (0 : ℝ) else sInf (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues))) ≤ ((2 : ℝ) * ((if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues)) + (if Fintype.card V = 0 then (0 : ℝ) else sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues)))) := by
+  classical
+  by_cases hn : Fintype.card V = 0
+  · simp only [if_pos hn, sub_self, add_zero, mul_zero, le_refl]
+  · simp only [if_neg hn]
+    haveI : Nonempty V := Fintype.card_pos_iff.mp (Nat.pos_of_ne_zero hn)
+    have hquad (H : SimpleGraph V) [DecidableRel H.Adj]
+        (x : EuclideanSpace ℝ V) :
+        inner ℝ x ((H.adjMatrix ℝ).toEuclideanLin x) ≤
+          sSup (Set.range (H.isHermitian_adjMatrix ℝ).eigenvalues) * inner ℝ x x := by
+      let A : Matrix V V ℝ := H.adjMatrix ℝ
+      let hA : A.IsHermitian := H.isHermitian_adjMatrix ℝ
+      let b := hA.eigenvectorBasis
+      let T := A.toEuclideanLin
+      let M : ℝ := sSup (Set.range hA.eigenvalues)
+      have hT : T.IsSymmetric := Matrix.isSymmetric_toEuclideanLin_iff.mpr hA
+      have heig (i : V) : T (b i) = hA.eigenvalues i • b i := by
+        apply PiLp.ext
+        intro j
+        change Matrix.mulVec A (fun k => b i k) j = hA.eigenvalues i * b i j
+        exact congrFun (hA.mulVec_eigenvectorBasis i) j
+      have hcoeff (i : V) :
+          inner ℝ (b i) (T x) = hA.eigenvalues i * inner ℝ (b i) x := by
+        rw [← hT (b i) x, heig i, real_inner_smul_left]
+      calc
+        inner ℝ x (T x) = ∑ i : V, hA.eigenvalues i * (inner ℝ (b i) x) ^ 2 := by
+          rw [← b.sum_inner_mul_inner x (T x)]
+          apply Finset.sum_congr rfl
+          intro i hi
+          rw [hcoeff i, real_inner_comm (b i) x]
+          ring
+        _ ≤ ∑ i : V, M * (inner ℝ (b i) x) ^ 2 := by
+          apply Finset.sum_le_sum
+          intro i hi
+          apply mul_le_mul_of_nonneg_right
+          · exact le_csSup (Set.finite_range hA.eigenvalues).bddAbove ⟨i, rfl⟩
+          · exact sq_nonneg _
+        _ = M * inner ℝ x x := by
+          rw [← Finset.mul_sum, b.sum_sq_inner_right x, real_inner_self_eq_norm_sq]
+    have hbound (H : SimpleGraph V) [DecidableRel H.Adj] (i : V) :
+        -((H.isHermitian_adjMatrix ℝ).eigenvalues i) ≤
+          sSup (Set.range (H.isHermitian_adjMatrix ℝ).eigenvalues) := by
+      let A : Matrix V V ℝ := H.adjMatrix ℝ
+      let hA : A.IsHermitian := H.isHermitian_adjMatrix ℝ
+      let T := A.toEuclideanLin
+      let x : EuclideanSpace ℝ V := hA.eigenvectorBasis i
+      let y : EuclideanSpace ℝ V := WithLp.toLp 2 (fun v => |x v|)
+      have hx1 : inner ℝ x x = 1 :=
+        inner_self_eq_one_of_norm_eq_one (hA.eigenvectorBasis.orthonormal.1 i)
+      have hy : inner ℝ y y = inner ℝ x x := by
+        change (∑ v : V, |x v| * |x v|) = ∑ v : V, x v * x v
+        apply Finset.sum_congr rfl
+        intro v hv
+        simpa only [pow_two] using sq_abs (x v)
+      have hx : T x = hA.eigenvalues i • x := by
+        apply PiLp.ext
+        intro j
+        change Matrix.mulVec A (fun k => x k) j = hA.eigenvalues i * x j
+        exact congrFun (hA.mulVec_eigenvectorBasis i) j
+      have he : inner ℝ x (T x) = hA.eigenvalues i := by
+        rw [hx, real_inner_smul_right, hx1, mul_one]
+      have hcomp : -inner ℝ x (T x) ≤ inner ℝ y (T y) := by
+        change -(∑ v : V, (∑ w : V, A v w * x w) * x v) ≤
+          ∑ v : V, (∑ w : V, A v w * |x w|) * |x v|
+        simp only [Finset.sum_mul, ← Finset.sum_neg_distrib]
+        apply Finset.sum_le_sum
+        intro v hv
+        apply Finset.sum_le_sum
+        intro w hw
+        have ha : 0 ≤ A v w := by
+          change (0 : ℝ) ≤ (if H.Adj v w then 1 else 0)
+          split_ifs <;> norm_num
+        calc
+          -(A v w * x w * x v) ≤ |A v w * x w * x v| := neg_le_abs _
+          _ = A v w * |x w| * |x v| := by
+            rw [abs_mul, abs_mul, abs_of_nonneg ha]
+      calc
+        -(hA.eigenvalues i) = -inner ℝ x (T x) := by rw [he]
+        _ ≤ inner ℝ y (T y) := hcomp
+        _ ≤ sSup (Set.range hA.eigenvalues) * inner ℝ y y := hquad H y
+        _ = sSup (Set.range hA.eigenvalues) := by rw [hy, hx1, mul_one]
+    have hlo :
+        -sSup (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues) ≤
+          sInf (Set.range (G.isHermitian_adjMatrix ℝ).eigenvalues) := by
+      apply le_csInf (Set.range_nonempty _)
+      rintro z ⟨i, rfl⟩
+      have hi := hbound G i
+      linarith only [hi]
+    have hc : 0 ≤ sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues) := by
+      obtain ⟨v⟩ := (inferInstance : Nonempty V)
+      have hneg := hbound Gᶜ v
+      have hle : (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues v ≤
+          sSup (Set.range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues) :=
+        le_csSup (Set.finite_range (Gᶜ.isHermitian_adjMatrix ℝ).eigenvalues).bddAbove ⟨v, rfl⟩
+      linarith only [hneg, hle]
+    linarith only [hlo, hc]

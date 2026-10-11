@@ -1,0 +1,98 @@
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+
+theorem degree_sum_density_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((2 : ℝ) * (G.edgeFinset.card : ℝ)) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  have hn : 2 * G.edgeFinset.card ≤ Fintype.card V * G.maxDegree := by
+    calc
+      2 * G.edgeFinset.card = ∑ v, G.degree v := G.sum_degrees_eq_twice_card_edges.symm
+      _ ≤ ∑ _v : V, G.maxDegree := Finset.sum_le_sum fun v _ => G.degree_le_maxDegree v
+      _ = Fintype.card V * G.maxDegree := by simp
+  exact_mod_cast hn
+
+theorem clique_le_max_degree_plus_one {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  obtain ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  have hn : G.cliqueNum ≤ G.maxDegree + 1 := by
+    by_cases he : s.Nonempty
+    · obtain ⟨v, hv⟩ := he
+      have hsubset : s.erase v ⊆ G.neighborFinset v := by
+        intro w hw
+        rw [G.mem_neighborFinset]
+        exact hs.isClique hv (Finset.mem_erase.mp hw).2 (Finset.mem_erase.mp hw).1.symm
+      have hcard := Finset.card_le_card hsubset
+      rw [Finset.card_erase_of_mem hv, G.card_neighborFinset_eq_degree, hs.card_eq] at hcard
+      have hmax := G.degree_le_maxDegree v
+      have hpos : 0 < G.cliqueNum := hs.card_eq ▸ Finset.card_pos.mpr ⟨v,hv⟩
+      omega
+    · have : G.cliqueNum = 0 := by
+        rw [← hs.card_eq]
+        exact Finset.card_eq_zero.mpr (Finset.not_nonempty_iff_eq_empty.mp he)
+      omega
+  exact_mod_cast hn
+
+theorem clique_edges_density_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((G.cliqueNum : ℝ) * ((G.cliqueNum : ℝ) - (1 : ℝ))) ≤ ((2 : ℝ) * (G.edgeFinset.card : ℝ)) := by
+  classical
+  obtain ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  have hdv : ∀ v ∈ s, (G.cliqueNum : ℝ) - 1 ≤ (G.degree v : ℝ) := by
+    intro v hv
+    have hsubset : s.erase v ⊆ G.neighborFinset v := by
+      intro w hw
+      rw [G.mem_neighborFinset]
+      exact hs.isClique hv (Finset.mem_erase.mp hw).2 (Finset.mem_erase.mp hw).1.symm
+    have hcard := Finset.card_le_card hsubset
+    rw [Finset.card_erase_of_mem hv, G.card_neighborFinset_eq_degree, hs.card_eq] at hcard
+    have hpos : 0 < G.cliqueNum := hs.card_eq ▸ Finset.card_pos.mpr ⟨v,hv⟩
+    have hn : G.cliqueNum ≤ G.degree v + 1 := by omega
+    have hr : (G.cliqueNum : ℝ) ≤ (G.degree v : ℝ) + 1 := by exact_mod_cast hn
+    linarith
+  calc
+    (G.cliqueNum : ℝ) * ((G.cliqueNum : ℝ) - 1) = ∑ v ∈ s, ((G.cliqueNum : ℝ) - 1) := by
+      simp [hs.card_eq]
+      ring
+    _ ≤ ∑ v ∈ s, (G.degree v : ℝ) := Finset.sum_le_sum hdv
+    _ ≤ ∑ v : V, (G.degree v : ℝ) := Finset.sum_le_sum_of_subset_of_nonneg
+      (Finset.subset_univ s) (fun v _ _ => Nat.cast_nonneg _)
+    _ = (2 : ℝ) * (G.edgeFinset.card : ℝ) := by exact_mod_cast G.sum_degrees_eq_twice_card_edges
+theorem composed_b214f1e86200a2e1 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((G.cliqueNum : ℝ) * ((G.cliqueNum : ℝ) - (1 : ℝ))) ≤ ((Fintype.card V : ℝ) * (G.maxDegree : ℝ)) := by
+  sorry

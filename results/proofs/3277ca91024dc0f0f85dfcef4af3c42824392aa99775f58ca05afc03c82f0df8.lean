@@ -1,0 +1,80 @@
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Tactic
+
+
+
+
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem clique_le_max_degree_plus_one {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ ((G.maxDegree : ℝ) + (1 : ℝ)) := by
+  obtain ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  have hn : G.cliqueNum ≤ G.maxDegree + 1 := by
+    by_cases he : s.Nonempty
+    · obtain ⟨v, hv⟩ := he
+      have hsubset : s.erase v ⊆ G.neighborFinset v := by
+        intro w hw
+        rw [G.mem_neighborFinset]
+        exact hs.isClique hv (Finset.mem_erase.mp hw).2 (Finset.mem_erase.mp hw).1.symm
+      have hcard := Finset.card_le_card hsubset
+      rw [Finset.card_erase_of_mem hv, G.card_neighborFinset_eq_degree, hs.card_eq] at hcard
+      have hmax := G.degree_le_maxDegree v
+      have hpos : 0 < G.cliqueNum := hs.card_eq ▸ Finset.card_pos.mpr ⟨v,hv⟩
+      omega
+    · have : G.cliqueNum = 0 := by
+        rw [← hs.card_eq]
+        exact Finset.card_eq_zero.mpr (Finset.not_nonempty_iff_eq_empty.mp he)
+      omega
+  exact_mod_cast hn
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+theorem hull3d_clique_number_le_0_1_0_triangle_count_radius_4_66667_is_connected_4d92cb1e01e5 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.Connected)) :
+    (G.cliqueNum : ℝ) ≤ (((1 / 10 : ℝ) * ((G.cliqueFinset 3).card : ℝ)) + (4666666666666667 / 1000000000000000 : ℝ)) := by
+  obtain ⟨s, hs⟩ := G.exists_isNClique_cliqueNum
+  have hsub : s.powersetCard 3 ⊆ G.cliqueFinset 3 := by
+    intro t ht
+    obtain ⟨hts, htcard⟩ := Finset.mem_powersetCard.mp ht
+    apply SimpleGraph.mem_cliqueFinset_iff.mpr
+    refine ⟨?_, htcard⟩
+    intro u hu v hv huv
+    exact hs.isClique (hts hu) (hts hv) huv
+  have htri : G.cliqueNum.choose 3 ≤ (G.cliqueFinset 3).card := by
+    have h := Finset.card_le_card hsub
+    simpa only [Finset.card_powersetCard, hs.card_eq] using h
+  have hnum : ∀ n : ℕ, 10 * n ≤ n.choose 3 + 40 := by
+    intro n
+    induction n with
+    | zero => norm_num [Nat.choose]
+    | succ n ih =>
+        by_cases hn : n < 5
+        · interval_cases n <;> norm_num [Nat.choose]
+        · have htwo : 10 ≤ n.choose 2 := by
+            calc
+              10 = Nat.choose 5 2 := by norm_num [Nat.choose]
+              _ ≤ n.choose 2 := Nat.choose_le_choose 2 (by omega)
+          have hstep : (n + 1).choose 3 = n.choose 2 + n.choose 3 :=
+            Nat.choose_succ_succ n 2
+          rw [hstep]
+          omega
+  have hnat : 10 * G.cliqueNum ≤ (G.cliqueFinset 3).card + 40 :=
+    (hnum G.cliqueNum).trans (Nat.add_le_add_right htri 40)
+  have hreal : (10 : ℝ) * (G.cliqueNum : ℝ) ≤
+      ((G.cliqueFinset 3).card : ℝ) + 40 := by
+    exact_mod_cast hnat
+  linarith

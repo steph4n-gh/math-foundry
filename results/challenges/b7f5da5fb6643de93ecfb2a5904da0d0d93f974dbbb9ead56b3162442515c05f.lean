@@ -1,0 +1,898 @@
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Bipartite
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Constructions
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+
+theorem parity_code_dimension_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have hn : Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) ≤ Fintype.card V := by
+    calc
+      _ ≤ Module.finrank (ZMod 2) (V → ZMod 2) := Submodule.finrank_le _
+      _ = Fintype.card V := Module.finrank_fintype_fun_eq_card (ZMod 2)
+  exact_mod_cast hn
+
+theorem model_639525f7a46b1b3dbd00 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Colorable 2) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)) ∧ ((let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ)) ≥ (39999999 / 10000000 : ℝ)))) :
+    (Fintype.card V : ℝ) ≤ (Real.exp ((((Fintype.card V : ℝ) - (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ)) / (2 : ℝ)) * (Real.log (1 + (1 : ℝ))))) := by
+  classical
+  let M := G.adjMatrix (ZMod 2)
+  let A := M.mulVecLin
+  let E (u : Finset V) : (u → ZMod 2) →ₗ[ZMod 2] (V → ZMod 2) :=
+    { toFun := fun x v => if hv : v ∈ u then x ⟨v, hv⟩ else 0
+      map_add' := by
+        intro x y
+        funext v
+        by_cases hv : v ∈ u <;> simp [hv]
+      map_smul' := by
+        intro c x
+        funext v
+        by_cases hv : v ∈ u <;> simp [hv] }
+  have hE (u : Finset V) : Function.Injective (E u) := by
+    intro x y hxy
+    funext v
+    have h := congrFun hxy (v : V)
+    simpa [E, v.property] using h
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪
+    ((Finset.univ : Finset (V → ZMod 2)).filter
+      (fun x => x ≠ 0 ∧ A x = 0)).image hammingNorm
+  have hwne : weights.Nonempty := by simp [weights]
+  have hmin : (weights.min' hwne : ℝ) ≥ (39999999 / 10000000 : ℝ) := by
+    simpa only [weights, A, M] using h_guard.2.2
+  have hsmall (x : V → ZMod 2) (hx : A x = 0)
+      (hn : hammingNorm x ≤ 3) : x = 0 := by
+    by_contra hx0
+    have hm : hammingNorm x ∈ weights := by
+      dsimp only [weights]
+      exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr
+        ⟨x, Finset.mem_filter.mpr ⟨Finset.mem_univ x, hx0, hx⟩, rfl⟩))
+    have hle : weights.min' hwne ≤ hammingNorm x :=
+      Finset.min'_le weights _ hm
+    have hleR : (weights.min' hwne : ℝ) ≤ 3 := by
+      exact_mod_cast hle.trans hn
+    linarith only [hmin, hleR]
+  have hpack (u : Finset V) :
+      (2 : ℝ) * (u.card : ℝ) ≤
+        (2 : ℝ) ^ Module.finrank (ZMod 2) (LinearMap.range (A.comp (E u))) := by
+    by_cases hu : u.Nonempty
+    · obtain ⟨a, ha⟩ := hu
+      let x : (u × ZMod 2) → V → ZMod 2 := fun p v =>
+        (if v = (p.1 : V) then 1 else 0) + (if v = a then p.2 else 0)
+      let f : (u × ZMod 2) → LinearMap.range (A.comp (E u)) := fun p =>
+        ⟨A (x p), by
+          refine ⟨(fun v : u => x p (v : V)), ?_⟩
+          change A (E u (fun v : u => x p (v : V))) = A (x p)
+          apply congrArg A
+          funext v
+          by_cases hv : v ∈ u
+          · simp [E, hv]
+          · have hvp : v ≠ (p.1 : V) := by
+              intro h
+              apply hv
+              rw [h]
+              exact p.1.property
+            have hva : v ≠ a := by
+              intro h
+              exact hv (h.symm ▸ ha)
+            simp [E, x, hv, hvp, hva]⟩
+      have hf : Function.Injective f := by
+        rintro ⟨v, b⟩ ⟨w, c⟩ hxy
+        have hsy : A (x (v, b)) = A (x (w, c)) :=
+          congrArg (fun z : LinearMap.range (A.comp (E u)) =>
+            (z : V → ZMod 2)) hxy
+        have hk : A (x (v, b) - x (w, c)) = 0 := by
+          rw [map_sub, hsy, sub_self]
+        have hn : hammingNorm (x (v, b) - x (w, c)) ≤ 3 := by
+          calc
+            _ ≤ ({a, (v : V), (w : V)} : Finset V).card := by
+              unfold hammingNorm
+              apply Finset.card_le_card
+              intro i hi
+              by_contra hnot
+              have hia : i ≠ a := by
+                intro h
+                apply hnot
+                simp [h]
+              have hiv : i ≠ (v : V) := by
+                intro h
+                apply hnot
+                simp [h]
+              have hiw : i ≠ (w : V) := by
+                intro h
+                apply hnot
+                simp [h]
+              exact (Finset.mem_filter.mp hi).2
+                (by simp [x, Pi.sub_apply, hia, hiv, hiw])
+            _ ≤ 3 := Finset.card_le_three
+        have heq : x (v, b) = x (w, c) :=
+          sub_eq_zero.mp (hsmall _ hk hn)
+        have heq' (i : V) :
+            (if i = (v : V) then (1 : ZMod 2) else 0) +
+              (if i = a then b else 0) =
+            (if i = (w : V) then (1 : ZMod 2) else 0) +
+              (if i = a then c else 0) := congrFun heq i
+        have hvw : v = w := by
+          apply Subtype.ext
+          by_contra hne
+          by_cases hva : (v : V) = a
+          · have hwa : (w : V) ≠ a := by
+              intro hwa
+              exact hne (hva.trans hwa.symm)
+            have hwv : (w : V) ≠ (v : V) := Ne.symm hne
+            have hh := heq' (w : V)
+            simp only [if_neg hwv, if_pos rfl, if_neg hwa,
+              zero_add, add_zero] at hh
+            exact zero_ne_one hh
+          · have hh := heq' (v : V)
+            simp only [if_pos rfl, if_neg hne, if_neg hva, add_zero] at hh
+            exact one_ne_zero hh
+        have hbc : b = c := by
+          have hh := heq' a
+          rw [hvw] at hh
+          simp only [if_pos rfl] at hh
+          exact add_left_cancel hh
+        exact Prod.ext hvw hbc
+      have hc : u.card * 2 ≤ 2 ^ Module.finrank (ZMod 2)
+          (LinearMap.range (A.comp (E u))) := by
+        calc
+          _ = Fintype.card (u × ZMod 2) := by
+            rw [Fintype.card_prod, Fintype.card_coe, ZMod.card]
+          _ ≤ Fintype.card (LinearMap.range (A.comp (E u))) :=
+            Fintype.card_le_of_injective f hf
+          _ = _ := by
+            rw [Module.card_eq_pow_finrank (K := ZMod 2), ZMod.card]
+      have hcR : (u.card : ℝ) * 2 ≤
+          (2 : ℝ) ^ Module.finrank (ZMod 2) (LinearMap.range (A.comp (E u))) := by
+        exact_mod_cast hc
+      linarith only [hcR]
+    · have hu0 : u = ∅ := by
+        apply Finset.ext
+        intro v
+        constructor
+        · intro hv
+          exact (hu ⟨v, hv⟩).elim
+        · intro hv
+          simp at hv
+      have hcard : u.card = 0 := by simp [hu0]
+      rw [hcard, Nat.cast_zero, mul_zero]
+      exact pow_nonneg (by norm_num) _
+  obtain ⟨c⟩ := h_guard.1
+  let s : Finset V := Finset.univ.filter (fun v => c v = 0)
+  let t : Finset V := sᶜ
+  have hs0 (v : V) (hv : v ∈ s) : c v = 0 :=
+    (Finset.mem_filter.mp hv).2
+  have ht1 (v : V) (hv : v ∈ t) : c v = 1 := by
+    have hv0 : c v ≠ 0 := by
+      intro h
+      have hvs : v ∈ s := by simp [s, h]
+      exact (Finset.mem_compl.mp hv) hvs
+    have hval : (c v).val ≠ 0 := by
+      intro h
+      exact hv0 (Fin.ext h)
+    have hlt := (c v).isLt
+    apply Fin.ext
+    change (c v).val = 1
+    omega
+  have hs_zero (v w : V) (hv : v ∈ s) (hw : w ∈ s) : M v w = 0 := by
+    have hnot : ¬ G.Adj v w := by
+      intro h
+      exact c.valid h ((hs0 v hv).trans (hs0 w hw).symm)
+    simp [M, SimpleGraph.adjMatrix_apply, hnot]
+  have ht_zero (v w : V) (hv : v ∈ t) (hw : w ∈ t) : M v w = 0 := by
+    have hnot : ¬ G.Adj v w := by
+      intro h
+      exact c.valid h ((ht1 v hv).trans (ht1 w hw).symm)
+    simp [M, SimpleGraph.adjMatrix_apply, hnot]
+  have hsym (v w : V) : M v w = M w v :=
+    (G.isAdjMatrix_adjMatrix (ZMod 2)).symm.apply w v
+  have hrow (u : Finset V) (x : u → ZMod 2) (v : V) :
+      A (E u x) v = ∑ w : u, M v (w : V) * x w := by
+    change (∑ w : V, M v w * (E u x) w) = _
+    calc
+      _ = ∑ w ∈ u, M v w * (E u x) w := by
+        symm
+        apply Finset.sum_subset (Finset.subset_univ u)
+        intro w _ hw
+        simp [E, hw]
+      _ = ∑ w : u, M v (w : V) * (E u x) (w : V) :=
+        (Finset.sum_coe_sort u (fun w => M v w * (E u x) w)).symm
+      _ = ∑ w : u, M v (w : V) * x w := by
+        apply Finset.sum_congr rfl
+        intro w _
+        simp [E, w.property]
+  let B : Matrix t s (ZMod 2) := fun v w => M (v : V) (w : V)
+  have hAs : A.comp (E s) = (E t).comp B.mulVecLin := by
+    apply LinearMap.ext
+    intro x
+    funext v
+    change A (E s x) v = (E t (B.mulVecLin x)) v
+    rw [hrow]
+    by_cases hv : v ∈ s
+    · rw [show (E t (B.mulVecLin x)) v = 0 by simp [E, t, hv]]
+      apply Finset.sum_eq_zero
+      intro w _
+      rw [hs_zero v (w : V) hv w.property, zero_mul]
+    · have hvt : v ∈ t := Finset.mem_compl.mpr hv
+      rw [show (E t (B.mulVecLin x)) v = B.mulVecLin x ⟨v, hvt⟩ by
+        simp [E, hvt]]
+      rfl
+  have hAt : A.comp (E t) = (E s).comp B.transpose.mulVecLin := by
+    apply LinearMap.ext
+    intro x
+    funext v
+    change A (E t x) v = (E s (B.transpose.mulVecLin x)) v
+    rw [hrow]
+    by_cases hv : v ∈ s
+    · rw [show (E s (B.transpose.mulVecLin x)) v =
+          B.transpose.mulVecLin x ⟨v, hv⟩ by simp [E, hv]]
+      change (∑ w : t, M v (w : V) * x w) =
+        ∑ w : t, M (w : V) v * x w
+      apply Finset.sum_congr rfl
+      intro w _
+      rw [hsym v (w : V)]
+    · rw [show (E s (B.transpose.mulVecLin x)) v = 0 by simp [E, hv]]
+      have hvt : v ∈ t := Finset.mem_compl.mpr hv
+      apply Finset.sum_eq_zero
+      intro w _
+      rw [ht_zero v (w : V) hvt w.property, zero_mul]
+  have hrs : Module.finrank (ZMod 2) (LinearMap.range (A.comp (E s))) = B.rank := by
+    rw [hAs, LinearMap.range_comp]
+    exact (Submodule.equivMapOfInjective (E t) (hE t)
+      (LinearMap.range B.mulVecLin)).finrank_eq.symm
+  have hrt : Module.finrank (ZMod 2) (LinearMap.range (A.comp (E t))) = B.rank := by
+    calc
+      _ = B.transpose.rank := by
+        rw [hAt, LinearMap.range_comp]
+        exact (Submodule.equivMapOfInjective (E s) (hE s)
+          (LinearMap.range B.transpose.mulVecLin)).finrank_eq.symm
+      _ = B.rank := Matrix.rank_transpose B
+  have hrange : LinearMap.range A =
+      LinearMap.range (A.comp (E s)) ⊔ LinearMap.range (A.comp (E t)) := by
+    apply le_antisymm
+    · rintro y ⟨x, rfl⟩
+      have hx : x = E s (fun v : s => x (v : V)) +
+          E t (fun v : t => x (v : V)) := by
+        funext v
+        by_cases hv : v ∈ s <;> simp [E, t, hv]
+      rw [hx, map_add]
+      exact Submodule.add_mem_sup ⟨_, rfl⟩ ⟨_, rfl⟩
+    · exact sup_le (LinearMap.range_comp_le_range (E s) A)
+        (LinearMap.range_comp_le_range (E t) A)
+  have hdisjoint : Disjoint (LinearMap.range (A.comp (E s)))
+      (LinearMap.range (A.comp (E t))) := by
+    rw [Submodule.disjoint_def]
+    intro x hx hy
+    rcases hx with ⟨a, ha⟩
+    rcases hy with ⟨b, hb⟩
+    rw [hAs] at ha
+    rw [hAt] at hb
+    funext v
+    by_cases hv : v ∈ s
+    · have h := congrFun ha v
+      change (E t (B.mulVecLin a)) v = x v at h
+      simpa [E, t, hv] using h.symm
+    · have h := congrFun hb v
+      change (E s (B.transpose.mulVecLin b)) v = x v at h
+      simpa [E, hv] using h.symm
+  have hArank : Module.finrank (ZMod 2) (LinearMap.range A) = 2 * B.rank := by
+    have hdim := Submodule.finrank_sup_add_finrank_inf_eq
+      (LinearMap.range (A.comp (E s))) (LinearMap.range (A.comp (E t)))
+    rw [← hrange, hdisjoint.eq_bot, finrank_bot, add_zero, hrs, hrt] at hdim
+    omega
+  have hp := hpack s
+  have hq := hpack t
+  rw [hrs] at hp
+  rw [hrt] at hq
+  have hcardN : s.card + t.card = Fintype.card V := Finset.card_add_card_compl s
+  have hcardR : (s.card : ℝ) + (t.card : ℝ) = (Fintype.card V : ℝ) := by
+    exact_mod_cast hcardN
+  have hbound : (Fintype.card V : ℝ) ≤ (2 : ℝ) ^ B.rank := by
+    linarith only [hp, hq, hcardR]
+  have hn : 2 * B.rank + Module.finrank (ZMod 2) (LinearMap.ker A) =
+      Fintype.card V := by
+    simpa only [hArank, Module.finrank_fintype_fun_eq_card] using
+      LinearMap.finrank_range_add_finrank_ker A
+  have hnR : (2 : ℝ) * (B.rank : ℝ) +
+      (Module.finrank (ZMod 2) (LinearMap.ker A) : ℝ) = (Fintype.card V : ℝ) := by
+    exact_mod_cast hn
+  have hreal : (Fintype.card V : ℝ) -
+      (Module.finrank (ZMod 2) (LinearMap.ker A) : ℝ) = (2 : ℝ) * (B.rank : ℝ) := by
+    linarith only [hnR]
+  have hexp : Real.exp (((Fintype.card V : ℝ) -
+      (Module.finrank (ZMod 2) (LinearMap.ker A) : ℝ)) / 2 *
+      Real.log (1 + (1 : ℝ))) = (2 : ℝ) ^ B.rank := by
+    rw [hreal]
+    have hh : (2 : ℝ) * (B.rank : ℝ) / 2 = (B.rank : ℝ) := by ring
+    rw [hh, show (1 : ℝ) + 1 = 2 by norm_num, Real.exp_nat_mul,
+      Real.exp_log (by norm_num : (0 : ℝ) < 2)]
+  change (Fintype.card V : ℝ) ≤
+    Real.exp (((Fintype.card V : ℝ) -
+      (Module.finrank (ZMod 2) (LinearMap.ker A) : ℝ)) / 2 * Real.log (1 + (1 : ℝ)))
+  rw [hexp]
+  exact hbound
+
+theorem model_af2f7de6fc0dc093a01d {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)) ∧ ((let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ)) ≥ (39999999 / 10000000 : ℝ)))) :
+    (Fintype.card V : ℝ) ≤ (Real.exp ((((Fintype.card V : ℝ) - (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ)) - (1 : ℝ)) * (Real.log (1 + (1 : ℝ))))) := by
+  classical
+  let L : (V → ZMod 2) →ₗ[ZMod 2] (V → ZMod 2) :=
+    (G.adjMatrix (ZMod 2)).mulVecLin
+  let C : Submodule (ZMod 2) (V → ZMod 2) := LinearMap.ker L
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪
+    ((Finset.univ : Finset (V → ZMod 2)).filter
+      (fun x => x ≠ 0 ∧ L x = 0)).image hammingNorm
+  have hmin : (39999999 / 10000000 : ℝ) ≤
+      (weights.min' (by simp [weights]) : ℝ) := h_guard.2
+  have hdist : ∀ x : V → ZMod 2, x ≠ 0 → L x = 0 →
+      4 ≤ hammingNorm x := by
+    intro x hx hL
+    have hmem : hammingNorm x ∈ weights := by
+      apply Finset.mem_union.mpr
+      right
+      apply Finset.mem_image.mpr
+      refine ⟨x, ?_, rfl⟩
+      exact Finset.mem_filter.mpr ⟨Finset.mem_univ x, hx, hL⟩
+    have hle : (weights.min' (by simp [weights]) : ℝ) ≤
+        (hammingNorm x : ℝ) := by
+      exact_mod_cast (Finset.min'_le weights (hammingNorm x) hmem)
+    have hr := hmin.trans hle
+    by_contra hnot
+    have hsmall : hammingNorm x ≤ 3 := by omega
+    have hsmallR : (hammingNorm x : ℝ) ≤ 3 := by
+      exact_mod_cast hsmall
+    linarith
+  have hsent : weights.min' (by simp [weights]) ≤ Fintype.card V + 1 :=
+    Finset.min'_le weights (Fintype.card V + 1) (by simp [weights])
+  have hsentR : (weights.min' (by simp [weights]) : ℝ) ≤
+      ((Fintype.card V + 1 : ℕ) : ℝ) := by
+    exact_mod_cast hsent
+  have hnpos : 0 < Fintype.card V := by
+    by_contra hnot
+    have hzero : Fintype.card V = 0 := Nat.eq_zero_of_not_pos hnot
+    have hbad := hmin.trans hsentR
+    norm_num [hzero] at hbad
+  obtain ⟨a⟩ := Fintype.card_pos_iff.mp hnpos
+  letI : Fintype C := Fintype.ofFinite C
+  let f : C × (V × ZMod 2) → V → ZMod 2 := fun p t =>
+    (p.1 : V → ZMod 2) t +
+      ((if t = p.2.1 then 1 else 0) + (if t = a then p.2.2 else 0))
+  have hf : Function.Injective f := by
+    rintro ⟨x, v, b⟩ ⟨y, w, c⟩ h
+    have hxy : x = y := by
+      have hx : L (x : V → ZMod 2) = 0 := x.property
+      have hy : L (y : V → ZMod 2) = 0 := y.property
+      have hker : L ((x : V → ZMod 2) - (y : V → ZMod 2)) = 0 := by
+        simp only [map_sub, hx, hy, sub_self]
+      have hweight : hammingNorm ((x : V → ZMod 2) - (y : V → ZMod 2)) ≤ 3 := by
+        calc
+          hammingNorm ((x : V → ZMod 2) - (y : V → ZMod 2)) ≤
+              ({a, v, w} : Finset V).card := by
+            apply Finset.card_le_card
+            intro t ht
+            by_contra hnot
+            have ha : t ≠ a := by
+              intro he
+              apply hnot
+              simp [he]
+            have hv : t ≠ v := by
+              intro he
+              apply hnot
+              simp [he]
+            have hw : t ≠ w := by
+              intro he
+              apply hnot
+              simp [he]
+            have hh := congrFun h t
+            dsimp [f] at hh
+            have hval : (x : V → ZMod 2) t = (y : V → ZMod 2) t := by
+              simpa only [if_neg ha, if_neg hv, if_neg hw, zero_add, add_zero] using hh
+            exact (Finset.mem_filter.mp ht).2 (by simp [Pi.sub_apply, hval])
+          _ ≤ 3 := Finset.card_le_three
+      have hzero : (x : V → ZMod 2) - (y : V → ZMod 2) = 0 := by
+        by_contra hne
+        have hd := hdist _ hne hker
+        omega
+      exact Subtype.ext (sub_eq_zero.mp hzero)
+    subst y
+    have heq : ∀ t : V,
+        (if t = v then (1 : ZMod 2) else 0) + (if t = a then b else 0) =
+        (if t = w then (1 : ZMod 2) else 0) + (if t = a then c else 0) := by
+      intro t
+      have hh := congrFun h t
+      dsimp [f] at hh
+      exact add_left_cancel hh
+    have hvw : v = w := by
+      by_contra hne
+      by_cases hva : v = a
+      · have hwa : w ≠ a := by
+          intro hwa
+          exact hne (hva.trans hwa.symm)
+        have hwv : w ≠ v := Ne.symm hne
+        have hh := heq w
+        simp only [if_neg hwv, if_pos rfl, if_neg hwa, zero_add, add_zero] at hh
+        exact zero_ne_one hh
+      · have hh := heq v
+        simp only [if_pos rfl, if_neg hne, if_neg hva, add_zero] at hh
+        exact one_ne_zero hh
+    have hbc : b = c := by
+      have hh := heq a
+      rw [hvw] at hh
+      simp only [if_pos rfl] at hh
+      exact add_left_cancel hh
+    exact Prod.ext rfl (Prod.ext hvw hbc)
+  have hcardC : Fintype.card C = 2 ^ Module.finrank (ZMod 2) C := by
+    simpa only [ZMod.card, Fintype.card_fin] using
+      (Module.card_fintype (Module.finBasis (ZMod 2) C))
+  have hcount : 2 ^ Module.finrank (ZMod 2) C * (Fintype.card V * 2) ≤
+      2 ^ Fintype.card V := by
+    have hc := Fintype.card_le_of_injective f hf
+    simpa only [Fintype.card_prod, Fintype.card_fun, ZMod.card, hcardC] using hc
+  have hcountR : (2 : ℝ) ^ Module.finrank (ZMod 2) C *
+      ((Fintype.card V : ℝ) * 2) ≤ (2 : ℝ) ^ Fintype.card V := by
+    exact_mod_cast hcount
+  have hlog : Real.exp (Real.log (1 + (1 : ℝ))) = 2 := by
+    rw [Real.exp_log (by norm_num)]
+    norm_num
+  have hexp : Real.exp ((((Fintype.card V : ℝ) -
+      (Module.finrank (ZMod 2) C : ℝ)) - 1) * Real.log (1 + (1 : ℝ))) =
+      (2 : ℝ) ^ Fintype.card V / ((2 : ℝ) ^ Module.finrank (ZMod 2) C * 2) := by
+    simp only [sub_mul, one_mul, Real.exp_sub, Real.exp_nat_mul, hlog, div_div]
+  change (Fintype.card V : ℝ) ≤ Real.exp ((((Fintype.card V : ℝ) -
+    (Module.finrank (ZMod 2) C : ℝ)) - 1) * Real.log (1 + (1 : ℝ)))
+  rw [hexp]
+  apply (le_div_iff₀ (by positivity :
+    0 < (2 : ℝ) ^ Module.finrank (ZMod 2) C * 2)).2
+  nlinarith only [hcountR]
+
+theorem model_19ffa035acae97b080f4 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (((G.minDegree : ℝ) ≥ (9999999 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (19999999 / 10000000 : ℝ)))) :
+    ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) + (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ))) ≤ (Fintype.card V : ℝ) := by
+  have hbit : ∀ a b : ZMod 2,
+      (if a ≠ 0 then (1 : ℕ) else 0) +
+        (if b ≠ 0 then 1 else 0) +
+        (if a + b ≠ 0 then 1 else 0) ≤ 2 := by
+    decide
+  have hbit_eq : ∀ a b : ZMod 2, a + b = 0 → a = b := by
+    decide
+  classical
+  let A : (V → ZMod 2) →ₗ[ZMod 2] (V → ZMod 2) :=
+    (G.adjMatrix (ZMod 2)).mulVecLin
+  let C : Submodule (ZMod 2) (V → ZMod 2) := LinearMap.ker A
+  let k : ℕ := Module.finrank (ZMod 2) C
+  let n : ℕ := Fintype.card V
+  let weights : Finset ℕ := {n + 1} ∪
+    ((Finset.univ : Finset (V → ZMod 2)).filter
+      (fun x => x ≠ 0 ∧ A x = 0)).image hammingNorm
+  let d : ℕ := weights.min' (by simp [weights])
+  change (k : ℝ) + (d : ℝ) ≤ (n : ℝ)
+  have hkreal : (19999999 / 10000000 : ℝ) ≤ (k : ℝ) := h_guard.2
+  have hk : 2 ≤ k := by
+    by_contra h
+    have hle : (k : ℝ) ≤ 1 := by
+      exact_mod_cast (show k ≤ 1 by omega)
+    linarith
+  have hdeg : 0 < G.minDegree := by
+    by_contra h
+    have heq : G.minDegree = 0 := by omega
+    have hg := h_guard.1
+    rw [heq] at hg
+    norm_num at hg
+  have hkn : k ≤ n := by
+    calc
+      k ≤ Module.finrank (ZMod 2) (V → ZMod 2) := Submodule.finrank_le C
+      _ = n := Module.finrank_fintype_fun_eq_card (ZMod 2)
+  have hn : 0 < Fintype.card V := by
+    change 0 < n
+    omega
+  obtain ⟨u⟩ : Nonempty V := Fintype.card_pos_iff.mp hn
+  obtain ⟨v, huv⟩ := (G.degree_pos_iff_exists_adj u).mp
+    (lt_of_lt_of_le hdeg (G.minDegree_le_degree u))
+  let a : LinearMap.range A :=
+    ⟨A (Pi.single u 1), ⟨Pi.single u 1, rfl⟩⟩
+  let b : LinearMap.range A :=
+    ⟨A (Pi.single v 1), ⟨Pi.single v 1, rfl⟩⟩
+  have hb : b ≠ 0 := by
+    intro heq
+    have hh := congrArg
+      (fun w : LinearMap.range A => (w : V → ZMod 2) u) heq
+    simp [b, A, Matrix.mulVecLin_apply, Matrix.mulVec_single_one,
+      Matrix.col_apply, huv] at hh
+  have hba : ∀ c : ZMod 2, c • b ≠ a := by
+    intro c heq
+    have hh := congrArg
+      (fun w : LinearMap.range A => (w : V → ZMod 2) v) heq
+    simp [a, b, A, Matrix.mulVecLin_apply, Matrix.mulVec_single_one,
+      Matrix.col_apply, G.adj_symm huv] at hh
+  have hab : LinearIndependent (ZMod 2) ![a, b] :=
+    linearIndependent_fin2.mpr ⟨hb, hba⟩
+  have hr : 2 ≤ Module.finrank (ZMod 2) (LinearMap.range A) := by
+    simpa using hab.fintype_card_le_finrank
+  have hrk : Module.finrank (ZMod 2) (LinearMap.range A) + k = n := by
+    simpa [k, C, n, Module.finrank_fintype_fun_eq_card]
+      using LinearMap.finrank_range_add_finrank_ker A
+  have hkn2 : k + 2 ≤ n := by omega
+  obtain ⟨s, hsu, hs⟩ := Finset.exists_subset_card_eq
+    (s := (Finset.univ : Finset V)) (n := k - 2)
+    (by simpa [n] using (Nat.sub_le k 2).trans hkn)
+  let p : C →ₗ[ZMod 2] (s → ZMod 2) :=
+    { toFun := fun w i => (w : V → ZMod 2) i.1
+      map_add' := by intro w z; rfl
+      map_smul' := by intro c w; rfl }
+  have hpr : Module.finrank (ZMod 2) (LinearMap.range p) ≤ k - 2 := by
+    calc
+      _ ≤ Module.finrank (ZMod 2) (s → ZMod 2) := Submodule.finrank_le _
+      _ = s.card := by
+        rw [Module.finrank_fintype_fun_eq_card, Fintype.card_coe]
+      _ = k - 2 := hs
+  have hpdim : 2 ≤ Module.finrank (ZMod 2) (LinearMap.ker p) := by
+    have heq := LinearMap.finrank_range_add_finrank_ker p
+    change Module.finrank (ZMod 2) (LinearMap.range p) +
+      Module.finrank (ZMod 2) (LinearMap.ker p) = k at heq
+    omega
+  obtain ⟨z, hz⟩ := exists_linearIndependent_of_le_finrank
+    (R := ZMod 2) (M := LinearMap.ker p) hpdim
+  let x : V → ZMod 2 := (z 0).val.val
+  let y : V → ZMod 2 := (z 1).val.val
+  have hxA : A x = 0 := LinearMap.mem_ker.mp (z 0).val.property
+  have hyA : A y = 0 := LinearMap.mem_ker.mp (z 1).val.property
+  have hx : x ≠ 0 := by
+    intro heq
+    apply hz.ne_zero 0
+    apply Subtype.ext
+    apply Subtype.ext
+    exact heq
+  have hy : y ≠ 0 := by
+    intro heq
+    apply hz.ne_zero 1
+    apply Subtype.ext
+    apply Subtype.ext
+    exact heq
+  have hxy : x + y ≠ 0 := by
+    intro heq
+    have hzeq : z 0 = z 1 := by
+      apply Subtype.ext
+      apply Subtype.ext
+      funext i
+      exact hbit_eq (x i) (y i) (congrFun heq i)
+    exact (by decide : (0 : Fin 2) ≠ 1) (hz.injective hzeq)
+  have hxyA : A (x + y) = 0 := by
+    rw [map_add, hxA, hyA, add_zero]
+  have hxs : ∀ i ∈ s, x i = 0 := by
+    intro i hi
+    have heq : p (z 0).val = 0 := LinearMap.mem_ker.mp (z 0).property
+    exact congrFun heq ⟨i, hi⟩
+  have hys : ∀ i ∈ s, y i = 0 := by
+    intro i hi
+    have heq : p (z 1).val = 0 := LinearMap.mem_ker.mp (z 1).property
+    exact congrFun heq ⟨i, hi⟩
+  have hd : ∀ t : V → ZMod 2, t ≠ 0 → A t = 0 → d ≤ hammingNorm t := by
+    intro t ht hAt
+    have hm : hammingNorm t ∈ weights := by
+      dsimp only [weights]
+      exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr
+        ⟨t, Finset.mem_filter.mpr ⟨Finset.mem_univ t, ht, hAt⟩, rfl⟩))
+    exact Finset.min'_le weights (hammingNorm t) hm
+  have hdx := hd x hx hxA
+  have hdy := hd y hy hyA
+  have hdxy := hd (x + y) hxy hxyA
+  have hpoint : ∀ i : V,
+      (if x i ≠ 0 then (1 : ℕ) else 0) +
+        (if y i ≠ 0 then 1 else 0) +
+        (if (x + y) i ≠ 0 then 1 else 0) ≤
+          if i ∈ s then 0 else 2 := by
+    intro i
+    by_cases hi : i ∈ s
+    · simp [hi, hxs i hi, hys i hi, Pi.add_apply]
+    · simpa [hi, Pi.add_apply] using hbit (x i) (y i)
+  have hcomp : (Finset.univ : Finset V).filter (fun i => i ∉ s) = sᶜ := by
+    ext i
+    simp
+  have hsum : hammingNorm x + hammingNorm y + hammingNorm (x + y) ≤
+      2 * (n - s.card) := by
+    calc
+      _ = ∑ i : V,
+          ((if x i ≠ 0 then (1 : ℕ) else 0) +
+            (if y i ≠ 0 then 1 else 0) +
+            (if (x + y) i ≠ 0 then 1 else 0)) := by
+        simp only [hammingNorm, Finset.card_filter, Finset.sum_add_distrib]
+      _ ≤ ∑ i : V, if i ∈ s then (0 : ℕ) else 2 :=
+        Finset.sum_le_sum (fun i _ => hpoint i)
+      _ = 2 * (n - s.card) := by
+        rw [Finset.sum_ite]
+        simp [hcomp, Finset.card_compl, n, Nat.mul_comm]
+  have h3d : 3 * d ≤ 2 * (n - s.card) := by omega
+  have hfinal : k + d ≤ n := by omega
+  exact_mod_cast hfinal
+
+theorem model_5e76b721dff9cc8391a8 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : ((G.Colorable 2) ∧ ((∃ d : ℕ, G.IsRegularOfDegree d)) ∧ ((G.minDegree : ℝ) ≥ (9999999 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)))) :
+    (((4 : ℝ) * (let weights : Finset ℕ := {Fintype.card V + 1} ∪ ((Finset.univ : Finset (V → ZMod 2)).filter (fun x => x ≠ 0 ∧ (G.adjMatrix (ZMod 2)).mulVecLin x = 0)).image hammingNorm; (weights.min' (by simp [weights]) : ℝ))) * ((1 : ℝ) - (Real.exp (((-(Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ)) / (2 : ℝ)) * (Real.log (1 + (1 : ℝ))))))) ≤ (Fintype.card V : ℝ) := by
+  classical
+  let A : (V → ZMod 2) →ₗ[ZMod 2] (V → ZMod 2) :=
+    (G.adjMatrix (ZMod 2)).mulVecLin
+  let K : Submodule (ZMod 2) (V → ZMod 2) := LinearMap.ker A
+  let k : ℕ := Module.finrank (ZMod 2) K
+  let weights : Finset ℕ := {Fintype.card V + 1} ∪
+    ((Finset.univ : Finset (V → ZMod 2)).filter
+      (fun x => x ≠ 0 ∧ A x = 0)).image hammingNorm
+  have hw : weights.Nonempty := by simp [weights]
+  let d : ℕ := weights.min' hw
+  change (4 : ℝ) * (d : ℝ) *
+    (1 - Real.exp ((-(k : ℝ) / 2) * Real.log (1 + (1 : ℝ)))) ≤
+      (Fintype.card V : ℝ)
+  rw [show (1 + (1 : ℝ)) = 2 by norm_num]
+  have hkg : (9999999 / 10000000 : ℝ) ≤ (k : ℝ) := h_guard.2.2.2
+  have hkpos : 0 < k := by
+    have hh : (0 : ℝ) < (k : ℝ) := by linarith only [hkg]
+    exact_mod_cast hh
+  have hkn : k ≤ Fintype.card V := by
+    calc
+      k ≤ Module.finrank (ZMod 2) (V → ZMod 2) := Submodule.finrank_le K
+      _ = Fintype.card V := Module.finrank_fintype_fun_eq_card (ZMod 2)
+  have hn : 0 < Fintype.card V := lt_of_lt_of_le hkpos hkn
+  letI : Nonempty V := Fintype.card_pos_iff.mp hn
+  obtain ⟨r, hr⟩ := h_guard.2.1
+  have hrpos : 0 < r := by
+    have hh : (9999999 / 10000000 : ℝ) ≤ (r : ℝ) := by
+      simpa only [hr.minDegree_eq] using h_guard.2.2.1
+    have hh' : (0 : ℝ) < (r : ℝ) := by linarith only [hh]
+    exact_mod_cast hh'
+  obtain ⟨c⟩ := h_guard.1
+  let s : Finset V := Finset.univ.filter (fun v => c v = 0)
+  have hcolors : ∀ a b : Fin 2, a ≠ b → (a = 0 ↔ b ≠ 0) := by decide
+  have hopp {v w : V} (hvw : G.Adj v w) : v ∈ s ↔ w ∉ s := by
+    simpa only [s, Finset.mem_filter, Finset.mem_univ, true_and] using
+      hcolors (c v) (c w) (c.valid hvw)
+  have hB : G.IsBipartiteWith (s : Set V) ((sᶜ : Finset V) : Set V) := by
+    refine ⟨?_, ?_⟩
+    · apply Set.disjoint_left.mpr
+      intro v hv ht
+      exact (Finset.mem_compl.mp ht) hv
+    · intro v w hvw
+      by_cases hv : v ∈ s
+      · exact Or.inl ⟨hv, Finset.mem_compl.mpr ((hopp hvw).mp hv)⟩
+      · exact Or.inr ⟨Finset.mem_compl.mpr hv, (hopp hvw.symm).mpr hv⟩
+  have heq : s.card * r = (sᶜ).card * r := by
+    simpa only [hr.degree_eq, Finset.sum_const, Nat.nsmul_eq_mul] using
+      (SimpleGraph.isBipartiteWith_sum_degrees_eq hB)
+  have hcard : s.card = (sᶜ).card := mul_right_cancel₀ hrpos.ne' heq
+  have htotal : s.card + (sᶜ).card = Fintype.card V :=
+    Finset.card_add_card_compl s
+  have hside : 2 * s.card = Fintype.card V := by omega
+  have hside' : 2 * (sᶜ).card = Fintype.card V := by omega
+  have hproj (x : K) :
+      A (fun v => if v ∈ s then (x : V → ZMod 2) v else 0) = 0 := by
+    apply funext
+    intro v
+    change ((G.adjMatrix (ZMod 2)).mulVecLin
+      (fun w => if w ∈ s then (x : V → ZMod 2) w else 0)) v = 0
+    rw [Matrix.mulVecLin_apply, SimpleGraph.adjMatrix_mulVec_apply]
+    by_cases hv : v ∈ s
+    · apply Finset.sum_eq_zero
+      intro w hw'
+      have hadj : G.Adj v w := (G.mem_neighborFinset v w).mp hw'
+      have hw'' : w ∉ s := (hopp hadj).mp hv
+      simp only [if_neg hw'']
+    · calc
+        _ = ∑ w ∈ G.neighborFinset v, (x : V → ZMod 2) w := by
+          apply Finset.sum_congr rfl
+          intro w hw'
+          have hadj : G.Adj v w := (G.mem_neighborFinset v w).mp hw'
+          have hw'' : w ∈ s := (hopp hadj.symm).mpr hv
+          simp only [if_pos hw'']
+        _ = 0 := by
+          have hx : A (x : V → ZMod 2) = 0 := x.property
+          simpa only [A, Matrix.mulVecLin_apply,
+            SimpleGraph.adjMatrix_mulVec_apply, Pi.zero_apply] using congrFun hx v
+  let T : K →ₗ[ZMod 2] K :=
+    { toFun := fun x =>
+        ⟨(fun v => if v ∈ s then (x : V → ZMod 2) v else 0), hproj x⟩
+      map_add' := by
+        intro x y
+        apply Subtype.ext
+        funext v
+        change (if v ∈ s then (x : V → ZMod 2) v + (y : V → ZMod 2) v else 0) =
+          (if v ∈ s then (x : V → ZMod 2) v else 0) +
+            (if v ∈ s then (y : V → ZMod 2) v else 0)
+        by_cases hv : v ∈ s <;> simp [hv]
+      map_smul' := by
+        intro a x
+        apply Subtype.ext
+        funext v
+        change (if v ∈ s then a • ((x : V → ZMod 2) v) else 0) =
+          a • (if v ∈ s then (x : V → ZMod 2) v else 0)
+        by_cases hv : v ∈ s <;> simp [hv] }
+  have hchoice : ∃ (S : Finset V) (D : Submodule (ZMod 2) K),
+      2 * S.card = Fintype.card V ∧
+      k ≤ 2 * Module.finrank (ZMod 2) D ∧
+      ∀ (x : D) (v : V), v ∉ S → (x.val : V → ZMod 2) v = 0 := by
+    have hsplit : Module.finrank (ZMod 2) (LinearMap.range T) +
+        Module.finrank (ZMod 2) (LinearMap.ker T) = k :=
+      LinearMap.finrank_range_add_finrank_ker T
+    by_cases hm : Module.finrank (ZMod 2) (LinearMap.range T) ≤
+        Module.finrank (ZMod 2) (LinearMap.ker T)
+    · refine ⟨sᶜ, LinearMap.ker T, hside', ?_, ?_⟩
+      · omega
+      · intro x v hv
+        have hv' : v ∈ s := by simpa using hv
+        have hh : T x.val = 0 := LinearMap.mem_ker.mp x.property
+        have hh' := congrArg (fun z : K => (z : V → ZMod 2) v) hh
+        change (if v ∈ s then (x.val : V → ZMod 2) v else 0) = 0 at hh'
+        simpa only [if_pos hv'] using hh'
+    · refine ⟨s, LinearMap.range T, hside, ?_, ?_⟩
+      · omega
+      · intro x v hv
+        obtain ⟨y, hy⟩ := x.property
+        have hh := congrArg (fun z : K => (z : V → ZMod 2) v) hy
+        change (if v ∈ s then (y : V → ZMod 2) v else 0) =
+          (x.val : V → ZMod 2) v at hh
+        simpa only [if_neg hv] using hh.symm
+  obtain ⟨S, D, hS, hkD, hsupp⟩ := hchoice
+  letI : Fintype D := Fintype.ofFinite D
+  let e : D →ₗ[ZMod 2] (V → ZMod 2) := K.subtype.comp D.subtype
+  have hd (x : D) (hx : x ≠ 0) : d ≤ hammingNorm (e x) := by
+    have hxne : e x ≠ 0 := by
+      intro heq'
+      apply hx
+      apply Subtype.ext
+      apply Subtype.ext
+      exact heq'
+    have hxker : A (e x) = 0 := x.val.property
+    have hxmem : e x ∈ (Finset.univ : Finset (V → ZMod 2)).filter
+        (fun z => z ≠ 0 ∧ A z = 0) :=
+      Finset.mem_filter.mpr ⟨Finset.mem_univ _, hxne, hxker⟩
+    have hmem : hammingNorm (e x) ∈ weights :=
+      Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr ⟨e x, hxmem, rfl⟩))
+    exact Finset.min'_le weights (hammingNorm (e x)) hmem
+  have hbit : ∀ z : ZMod 2, z ≠ 0 → z = 1 := by decide
+  have hcoord (v : V) :
+      2 * (Finset.univ.filter (fun x : D => e x v ≠ 0)).card ≤ Fintype.card D := by
+    let U : Finset D := Finset.univ.filter (fun x => e x v ≠ 0)
+    let W : Finset D := Finset.univ.filter (fun x => e x v = 0)
+    change 2 * U.card ≤ Fintype.card D
+    by_cases hU : U.Nonempty
+    · obtain ⟨a, ha⟩ := hU
+      have ha1 : e a v = 1 := hbit _ (Finset.mem_filter.mp ha).2
+      have hUW : U.card ≤ W.card := by
+        apply Finset.card_le_card_of_injOn (fun x : D => x + a)
+        · intro x hx
+          refine Finset.mem_filter.mpr ⟨Finset.mem_univ _, ?_⟩
+          have hx1 : e x v = 1 := hbit _ (Finset.mem_filter.mp hx).2
+          change e (x + a) v = 0
+          rw [map_add, Pi.add_apply, hx1, ha1]
+          decide
+        · intro x hx y hy hxy
+          exact add_right_cancel hxy
+      have hpartition : U.card + W.card = Fintype.card D := by
+        simpa [U, W] using
+          (Finset.card_filter_add_card_filter_not
+            (s := (Finset.univ : Finset D)) (fun x : D => e x v ≠ 0))
+      omega
+    · have hzero : U.card = 0 :=
+        Finset.card_eq_zero.mpr (Finset.not_nonempty_iff_eq_empty.mp hU)
+      simp [hzero]
+  have hsum : (∑ x : D, hammingNorm (e x)) =
+      ∑ v : V, (Finset.univ.filter (fun x : D => e x v ≠ 0)).card := by
+    simp only [hammingNorm, Finset.card_eq_sum_ones, Finset.sum_filter]
+    rw [Finset.sum_comm]
+  have hupper : 2 * (∑ x : D, hammingNorm (e x)) ≤
+      S.card * Fintype.card D := by
+    rw [hsum, Finset.mul_sum]
+    calc
+      _ ≤ ∑ v : V, if v ∈ S then Fintype.card D else 0 := by
+        apply Finset.sum_le_sum
+        intro v hv
+        by_cases hvS : v ∈ S
+        · simpa only [if_pos hvS] using hcoord v
+        · have hzero : Finset.univ.filter (fun x : D => e x v ≠ 0) = ∅ := by
+            apply Finset.filter_eq_empty_iff.mpr
+            intro x hx
+            exact fun h => h (hsupp x v hvS)
+          simp [hvS, hzero]
+      _ = S.card * Fintype.card D := by
+        rw [Finset.sum_ite]
+        simp [Finset.filter_mem_eq_inter, Nat.nsmul_eq_mul]
+  have hlower : (Fintype.card D - 1) * d ≤ ∑ x : D, hammingNorm (e x) := by
+    calc
+      _ = ∑ x ∈ (Finset.univ : Finset D).erase 0, d := by
+        simp only [Finset.sum_const, Nat.nsmul_eq_mul,
+          Finset.card_erase_of_mem (Finset.mem_univ (0 : D)), Finset.card_univ]
+      _ ≤ ∑ x ∈ (Finset.univ : Finset D).erase 0, hammingNorm (e x) :=
+        Finset.sum_le_sum (fun x hx => hd x ((Finset.mem_erase.mp hx).1))
+      _ = ∑ x : D, hammingNorm (e x) :=
+        Finset.sum_erase (Finset.univ : Finset D)
+          (f := fun x : D => hammingNorm (e x)) (a := (0 : D)) (by simp)
+  have hbound : 4 * (Fintype.card D - 1) * d ≤
+      Fintype.card V * Fintype.card D := by
+    calc
+      _ = 2 * (2 * ((Fintype.card D - 1) * d)) := by ring
+      _ ≤ 2 * (2 * (∑ x : D, hammingNorm (e x))) :=
+        Nat.mul_le_mul_left 2 (Nat.mul_le_mul_left 2 hlower)
+      _ ≤ 2 * (S.card * Fintype.card D) := Nat.mul_le_mul_left 2 hupper
+      _ = Fintype.card V * Fintype.card D := by rw [← mul_assoc, hS]
+  have hboundR : (4 : ℝ) * ((Fintype.card D - 1 : ℕ) : ℝ) * (d : ℝ) ≤
+      (Fintype.card V : ℝ) * (Fintype.card D : ℝ) := by
+    exact_mod_cast hbound
+  have hm1 : 1 ≤ Fintype.card D := Fintype.card_pos
+  rw [Nat.cast_sub hm1, Nat.cast_one] at hboundR
+  have hmpos : (0 : ℝ) < (Fintype.card D : ℝ) := by
+    exact_mod_cast (Fintype.card_pos : 0 < Fintype.card D)
+  have hscaled :
+      (4 * (d : ℝ) * (1 - (Fintype.card D : ℝ)⁻¹)) * (Fintype.card D : ℝ) ≤
+        (Fintype.card V : ℝ) * (Fintype.card D : ℝ) := by
+    calc
+      _ = 4 * (d : ℝ) *
+          ((1 - (Fintype.card D : ℝ)⁻¹) * (Fintype.card D : ℝ)) := by ring
+      _ = 4 * ((Fintype.card D : ℝ) - 1) * (d : ℝ) := by
+        rw [sub_mul, one_mul, inv_mul_cancel₀ hmpos.ne']
+        ring
+      _ ≤ (Fintype.card V : ℝ) * (Fintype.card D : ℝ) := hboundR
+  have hsmall : 4 * (d : ℝ) * (1 - (Fintype.card D : ℝ)⁻¹) ≤
+      (Fintype.card V : ℝ) := by
+    by_contra! h
+    exact (not_lt_of_ge hscaled) (mul_lt_mul_of_pos_right h hmpos)
+  letI : Module.Free (ZMod 2) D := Module.Free.of_divisionRing (ZMod 2) D
+  have hm : Fintype.card D = 2 ^ Module.finrank (ZMod 2) D := by
+    simpa only [ZMod.card, Fintype.card_fin] using
+      (Module.card_fintype (Module.finBasis (ZMod 2) D))
+  have hmreal : (Fintype.card D : ℝ) =
+      (2 : ℝ) ^ Module.finrank (ZMod 2) D := by
+    exact_mod_cast hm
+  have hexp : Real.exp (-(Module.finrank (ZMod 2) D : ℝ) * Real.log 2) =
+      (Fintype.card D : ℝ)⁻¹ := by
+    rw [neg_mul, Real.exp_neg, Real.exp_nat_mul,
+      Real.exp_log (by norm_num : (0 : ℝ) < 2), ← hmreal]
+  have hdimR : (k : ℝ) / 2 ≤ (Module.finrank (ZMod 2) D : ℝ) := by
+    have hh : (k : ℝ) ≤ 2 * (Module.finrank (ZMod 2) D : ℝ) := by
+      exact_mod_cast hkD
+    linarith only [hh]
+  have hlog : (0 : ℝ) ≤ Real.log 2 := Real.log_nonneg (by norm_num)
+  have hexple : Real.exp (-(Module.finrank (ZMod 2) D : ℝ) * Real.log 2) ≤
+      Real.exp ((-(k : ℝ) / 2) * Real.log 2) := by
+    apply Real.exp_le_exp.mpr
+    have hh : -(Module.finrank (ZMod 2) D : ℝ) ≤ -(k : ℝ) / 2 := by
+      linarith only [hdimR]
+    exact mul_le_mul_of_nonneg_right hh hlog
+  rw [hexp] at hexple
+  calc
+    (4 : ℝ) * (d : ℝ) * (1 - Real.exp ((-(k : ℝ) / 2) * Real.log 2)) ≤
+        4 * (d : ℝ) * (1 - (Fintype.card D : ℝ)⁻¹) :=
+      mul_le_mul_of_nonneg_left (sub_le_sub_left hexple 1)
+        (mul_nonneg (by norm_num) (Nat.cast_nonneg d))
+    _ ≤ (Fintype.card V : ℝ) := hsmall
+theorem model_f625da6cfd36c5bd35d9 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) + ((2 : ℝ) * ((Int.floor ((G.cliqueNum : ℝ) / (2 : ℝ))) : ℝ))) ≤ (Fintype.card V : ℝ) := by
+  sorry

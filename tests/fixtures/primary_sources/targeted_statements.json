@@ -1,0 +1,208 @@
+[
+  {
+    "url": "https://arxiv.org/html/2405.09254v1",
+    "source_sha256": "e217ece9a113368b5d82bd2833929ae1919f058d6b479e7ff9ef6f81bec6746b",
+    "source_version": "\"CNrdsLn4uZYDEAE=\"",
+    "format": "html",
+    "pages": [
+      {
+        "page": 1,
+        "text": "Throughout the paper, $q$ denotes a prime power and $\\mathbb{F}_{q}$ the finite field with $q$ elements. For a positive integer $n$ , we denote by $\\Mat_{n}(\\mathbb{F}_{q})$ the space of $n\\times n$ matrices with entries in $\\mathbb{F}_{q}$ . For a given matrix $M\\in\\Mat_{n}(\\mathbb{F}_{q})$ , we denote by $\\textnormal{colsp}(M)$ the subspace of $\\mathbb{F}_{q}^{n}$ spanned by the columns of $M$ and by $\\textnormal{rowsp}(M)$ the subspace of $\\mathbb{F}_{q}^{n}$ spanned by the rows of $M$ . We denote by $O$ the $n\\times n$ zero-matrix. The standard basis vector of $\\mathbb{F}_{q}^{n}$ is denoted by $\\{e_{1},\\ldots,e_{n}\\}$ .",
+        "anchor": "S2.p1",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 2,
+        "text": "Definition 2.1. A matrix $A\\in\\Mat_{n}(\\mathbb{F}_{q})$ is said to be alternating or skew-symmetric if $A=-A^{\\top}$ and $A_{i,i}=0$ for all $i\\in\\{1,\\ldots,n\\}$ . We denote by $\\Alt_{n}(\\mathbb{F}_{q})$ the space of $n\\times n$ alternating matrices with entries in $\\mathbb{F}_{q}$ .",
+        "anchor": "S2.Thmtheorem1",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      },
+      {
+        "page": 3,
+        "text": "Notice that alternating matrices have always even rank, hence we have that the minimum distance of an alternating code is always even and we usually assume that it is $2d$ , for some positive integer $d$ . We use $A_{q}(n,2d)$ to denote the maximal cardinality of an alternating code in $\\Alt_{n}(q)$ with the property that any two distinct codewords are at distance at least $2d$ from each other.",
+        "anchor": "S2.SS1.p3",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      }
+    ],
+    "fixture_note": "Complete selected HTML body blocks extracted from the versioned source, with MathML alttext."
+  },
+  {
+    "url": "https://arxiv.org/html/1802.10142v1",
+    "source_sha256": "60c9db9850baf3a8fa26d155ad58111fe5070bdf79e432aae856275ec03ccf03",
+    "source_version": "\"CO+7g8T4uZYDEAE=\"",
+    "format": "html",
+    "pages": [
+      {
+        "page": 1,
+        "text": "Throughout this article, all graphs are assumed to be finite, undirected and without loops or multiple edges. The vertices of a graph $G$ are denoted by $V(G)$ and its edges by $E(G)$ . We also assume that $\\mathbb{F}$ denotes an arbitrary field. Following the notation in [8], we denote by $\\mathcal{M}_{\\mathbb{F}}(G)$ the set of all matrices $M$ over $\\mathbb{F}$ with rows and columns indexed by $V(G)$ , so that for every two distinct vertices $u,v\\in V(G)$ , the $(u,v)-$ entry of $M$ is non-zero if and only if $\\{u,v\\}\\in E(G)$ . Notice that the diagonal entries are allowed to be non-zero. A matrix $M$ over $\\mathbb{F}$ is said to be acyclic if $M\\in\\mathcal{M}_{\\mathbb{F}}(F)$ for a forest $F$ . If the forest $F$ is a tree, then $M$ is said to be tree-patterned.",
+        "anchor": "S1.p1",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 2,
+        "text": "Given a graph $G$ , the adjacency matrix of $G$ , denoted by $A(G)$ , is a $(0,1)-$ matrix in $\\mathcal{M}_{\\mathbb{F}}(G)$ with zero diagonal.",
+        "anchor": "S1.p2",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 4,
+        "text": "Let $\\mathcal{M}_{\\mathbb{F},0}(G)$ be the set of matrices in $\\mathcal{M}_{\\mathbb{F}}(G)$ with zero in the diagonal. In Section 2 we show that given a forest $F$ , the null space of any matrix in $\\mathcal{M}_{\\mathbb{F},0}(F)$ can be obtained by multiplying the null space of $F$ by a suitable non-singular diagonal matrix. This will allow the use of all the tools developed in [5, 6] for the study of the null space of said matrices. In particular we use the results of [6] to give an optimal time algorithm for finding a sparsest basis of the null space of the matrix. In Section 3 we prove that the rank of any matrix in $\\mathcal{M}_{\\mathbb{F},0}(F)$ can be found by multiplying the rank of $F$ by a suitable non-singular diagonal matrix.",
+        "anchor": "S1.p7",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 13,
+        "text": "Corollary 10. If $F$ is a forest and $M\\in\\mathcal{M}_{\\mathbb{F},0}(F)$ , then $\\dim{\\operatorname{\\mathpzc{Rank}}(M)}=2m$ , where $m$ is the size of a maximum matching in $F$ .",
+        "anchor": "Thmtheorem10",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      }
+    ],
+    "fixture_note": "Complete selected HTML body blocks extracted from the versioned source, with MathML alttext."
+  },
+  {
+    "url": "https://arxiv.org/html/1106.3625v1",
+    "source_sha256": "ad9feae4c582583e0394e4598187a065daa7cb8aab14515825b1648ce98f6e42",
+    "source_version": "\"CPa79uz0uZYDEAE=\"",
+    "format": "html",
+    "pages": [
+      {
+        "page": 1,
+        "text": "Let $\\mathcal{C}$ be an $[n,k,d]_{q}$ linear code. Assume that the encoding of ${\\bf x}\\in\\mathbb{F}_{q}^{k}$ is by the vector $\\mathcal{C}({\\bf x})=({\\bf c}_{1}\\cdot{\\bf x},{\\bf c}_{2}\\cdot{\\bf x},\\ldots,{\\bf c}_{n}\\cdot{\\bf x})\\in\\mathbb{F}_{q}^{n}.$ (3) Thus the code $\\mathcal{C}$ is specified by the set of $n$ points $C=\\{{\\bf c}_{1},\\ldots,{\\bf c}_{n}\\}\\in\\mathbb{F}_{q}^{k}$ . The set of points must have full rank for $\\mathcal{C}$ to have $k$ information symbols. It is well known that the distance property is captured by the following condition (e.g., [9, theorem 1.1.6]).",
+        "anchor": "S2.p2",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 3,
+        "text": "Definition 2. For ${\\bf c}_{i}\\in C$ , we define $\\loc({\\bf c}_{i})$ to be the smallest integer $r$ for which there exists $R\\subseteq C$ of cardinality $r$ such that ${\\bf c}_{i}=\\sum_{j\\in R}\\lambda_{j}{\\bf c}_{j}.$ We further define $\\loc(\\mathcal{C})=\\max_{i\\in[n]}\\loc({\\bf c}_{i})$ .",
+        "anchor": "Thmtheorem2",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      },
+      {
+        "page": 4,
+        "text": "Definition 3. We say that a code $\\mathcal{C}$ has information locality $r$ if there exists $I\\subseteq C$ of full rank such that $\\loc({\\bf c})\\leqslant r$ for all ${\\bf c}\\in I.$",
+        "anchor": "Thmtheorem3",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      },
+      {
+        "page": 6,
+        "text": "Theorem 5. For any $[n,k,d]_{q}$ linear code with information locality $r$ , $n-k\\geqslant\\left\\lceil\\frac{k}{r}\\right\\rceil+d-2.$ (5)",
+        "anchor": "Thmtheorem5",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      }
+    ],
+    "fixture_note": "Complete selected HTML body blocks extracted from the versioned source, with MathML alttext."
+  },
+  {
+    "url": "https://arxiv.org/html/1209.1050v1",
+    "source_sha256": "de3e9116680b8b4ce2b2854090cb126986d0520beafe1a757151f444f03c4e0d",
+    "source_version": "\"CKf6l66GupYDEAE=\"",
+    "format": "html",
+    "pages": [
+      {
+        "page": 1,
+        "text": "A graph $G$ is $k$ -critical if $G$ is not $(k-1)$ -colorable, but every proper subgraph of $G$ is $(k-1)$ -colorable. Then every $k$ -critical graph has chromatic number $k$ and every $k$ -chromatic graph contains a $k$ -critical subgraph. The importance of the notion of criticality is that problems for $k$ -chromatic graphs may often be reduced to problems for $k$ -critical graphs, whose structure is more restricted. For example, every $k$ -critical graph is $2$ -connected and $(k-1)$ -edge-connected.",
+        "anchor": "S1.p2",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 2,
+        "text": "The only $1$ -critical graph is $K_{1}$ , and the only $2$ -critical graph is $K_{2}$ . The only $3$ -critical graphs are the odd cycles. For every $k\\geq 4$ and every $n\\geq k+2$ , there exists a $k$ -critical $n$ -vertex graph. Let $f_{k}(n)$ be the minimum number of edges in a $k$ -critical graph with $n$ vertices. Since $\\delta(G)\\geq k-1$ for every $k$ -critical $n$ -vertex graph $G$ , $f_{k}(n)\\geq\\frac{k-1}{2}n$ (1) for all $n\\geq k$ , $n\\neq k+1$ . Equality is achieved for $n=k$ and for $k=3$ and $n$ odd. Brooks’ Theorem [3] implies that for $k\\geq 4$ and $n\\geq k+2$ , the inequality in (1) is strict. In 1957, Dirac [8] asked to determine $f_{k}(n)$ and proved that for $k\\geq 4$ and $n\\geq k+2$ , $f_{k}(n)\\geq\\frac{k-1}{2}n+\\frac{k-3}{2}.$ (2) The result is tight for $n=2k-1$ and yields $f_{k}(2k-1)=k^{2}-k-1$ . Dirac used his bound to evaluate chromatic number of graphs embedded into fixed surfaces. Later, Kostochka and Stiebitz [19] improved (2) to $f_{k}(n)\\geq\\frac{k-1}{2}n+k-3$ (3) when $n\\neq 2k-1,k$ . This yields $f_{k}(2k)=k^{2}-3$ and $f_{k}(3k-2)=\\frac{3k(k-1)}{2}-2$ . In his fundamental papers [11, 12], Gallai found exact values of $f_{k}(n)$ for $k+2\\leq n\\leq 2k-1$ :",
+        "anchor": "S1.p4",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 5,
+        "text": "Theorem 3 If $k\\geq 4$ and $G$ is $k$ -critical, then $|E(G)|\\geq\\left\\lceil\\frac{(k+1)(k-2)|V(G)|-k(k-3)}{2(k-1)}\\right\\rceil$ . In other words, if $k\\geq 4$ and $n\\geq k,\\,n\\neq k+1$ , then $f_{k}(n)\\geq F(k,n):=\\left\\lceil\\frac{(k+1)(k-2)n-k(k-3)}{2(k-1)}\\right\\rceil.$ (9)",
+        "anchor": "Thmtheorem3",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      }
+    ],
+    "fixture_note": "Complete selected HTML body blocks extracted from the versioned source, with MathML alttext."
+  },
+  {
+    "url": "https://arxiv.org/html/1608.07871v1",
+    "source_sha256": "d2bcd364e6b20ccdc4c4a3bfe38895da59b33e3bea7c841aee90496deb74a78f",
+    "source_version": "\"CP/J2P6XupYDEAE=\"",
+    "format": "html",
+    "pages": [
+      {
+        "page": 2,
+        "text": "Our focus will be studying a sequence that was introduced by Butler et al. [4] as a refinement of the pr-sequence of an $n\\times n$ symmetric matrix $B$ over a field $\\mathbb{F}$ , which they called the enhanced principal rank characteristic sequence (abbreviated epr-sequence), and which was defined as $\\operatorname{epr}(B)=\\ell_{1}\\ell_{2}\\cdots\\ell_{n}$ , where $\\ell_{k}=\\begin{cases}\\tt{A}&\\text{if all the principal minors of order $k$ are nonzero;}\\\\ \\tt{S}&\\text{if some but not all the principal minors of order $k$ are nonzero;}\\\\ \\tt{N}&\\text{if none of the principal minors of order $k$ are nonzero, i.e., all are zero.}\\end{cases}$ Motivated by Theorem 1.1, we focus on fields of characteristic $2$ . Although epr-sequences have received attention after their introduction in [4] (see [5], [6] and [10], for example), very little is known about epr-sequences of symmetric matrices over a field of characteristic $2$ , since the vast majority of what has appeared on the literature regarding epr-sequences has been focused on fields of characteristic not $2$ (see [6] for results on real skew-symmetric matrices). The main objective of this paper is a complete characterization of the epr-sequences that are attainable by a symmetric matrix over a field of characteristic $2$ (see Theorems 3.2, 3.9 and 3.13). We find that the attainable epr-sequences over a field of characteristic $2$ possess very special structures, which is in contrast to the family of attainable epr-sequences over a field of characteristic $0$ : for example, it was shown in [4, Section 4] that any epr-sequence of $\\tt A$ s and $\\tt S$ s that ends with an $\\tt A$ is attainable over a field of characteristic $0$ , as well as any epr-sequence of $\\tt A$ s and $\\tt S$ s that ends with one or more consecutive $\\tt N$ s. Another motivating factor for considering this problem is that it is a simplification of the principal minor assignment problem as stated in [8], which also served as motivation for the introduction of the pr-sequence in [2]. Note that epr-sequences provide more information than pr-sequences, and thus are a step closer to the principal minor assignment problem.",
+        "anchor": "S1.p2",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 4,
+        "text": "In what follows, $K_{n}$ denotes the complete graph on $n$ vertices, and $A(K_{n})$ denotes its adjacency matrix.",
+        "anchor": "S1.p4",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      },
+      {
+        "page": 13,
+        "text": "Proposition 2.2. Let $n\\geq 2$ . Then, over a field of characteristic $2$ , $\\operatorname{epr}(A(K_{n}))=\\tt NA\\overline{NA}$ when $n$ is even, and $\\operatorname{epr}(A(K_{n}))=\\tt NA\\overline{NA}N$ when $n$ is odd.",
+        "anchor": "S2.Thmthm2",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_statement"
+      },
+      {
+        "page": 14,
+        "text": "Proof. Let $\\operatorname{epr}(A(K_{n}))=\\ell_{1}\\ell_{2}\\cdots\\ell_{n}$ . Obviously, $\\ell_{1}=\\tt N$ . Observe that, for $2\\leq q\\leq n$ , every $q\\times q$ principal submatrix of $B$ is equal to $A(K_{q})$ . Since $A(K_{q})=J_{q}-I_{q}$ , $\\det(A(K_{q}))=(-1)^{q-1}(q-1)=q-1$ (in characteristic $2$ ). Hence, $\\ell_{q}=\\tt N$ when $q$ is odd and $\\ell_{q}=\\tt A$ when $q$ is even. $\\square$",
+        "anchor": "S2.p3",
+        "math_readable": true,
+        "format": "html",
+        "evidence_kind": "body_context"
+      }
+    ],
+    "fixture_note": "Complete selected HTML body blocks extracted from the versioned source, with MathML alttext."
+  },
+  {
+    "url": "https://www.jstage.jst.go.jp/article/transfun/E108.A/5/E108.A_2024EAL2062/_pdf",
+    "source_sha256": "e396b0cd339cae061cddb77642ca82c3a5aa6af04e9ba78bbcd4d63999770ee1",
+    "source_version": "SHA256 snapshot e396b0cd339cae061cddb77642ca82c3a5aa6af04e9ba78bbcd4d63999770ee1",
+    "format": "pdf",
+    "pages": [
+      {
+        "page": 2,
+        "text": "\nDeﬁnition 3:SupposeG is a simple connected graph\nthat containsm vertices andn edges. The incidence matrix\nofG, H := H(G),isabinarymatrixofsize m× n. LetC be\na binary linear code speciﬁed by the parity-check matrixH.\nThen the codeC is called abinary cycle code.\nNote that each column of H is of weight 2.\nDefinition 4: boundary."
+      },
+      {
+        "page": 3,
+        "text": "\nLemma 3: Let H be the incidence matrix of a simple\nconnected graph with girthgd. SupposeC is a binary cycle\ncodewithparity-checkmatrix H. Thenwehave s(H) = d =\ngd and Smin(H) = Amin.\n\nProof: fixture end delimiter."
+      }
+    ],
+    "fixture_note": "Exact selected PDF statement text followed by synthetic delimiter text for boundary tests; source SHA identifies the original PDF, not this reduced fixture."
+  }
+]

@@ -1,0 +1,47 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Verified proof-search context SHA256 digests in frozen experiment evidence"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''^\s*"search_key": "[0-9a-f]{64}",?\s*$''']
+paths = ['''^evidence/(fresh/proof_transfer|generative)/.*\.json$''']
+
+[[rules.allowlists]]
+description = "Recomputed conjecture statement SHA256 identities in the frozen portfolio"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''^\s*"statement_key": "[0-9a-f]{64}",?\s*$''']
+paths = ['''^evidence/generative/portfolio/(manifest|host_screening|independent_replay|fixed/results|model_frozen/results|model_learning/results)\.json$''']
+
+[[rules.allowlists]]
+description = "Host-generated SHA256 proof-context and exact-statement identities in engine qualification evidence"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''^\s*"(search_key|statement_key|target_raw_statement_key|equivalent_live_raw_statement_key)": "[0-9a-f]{64}",?\s*$''']
+paths = ['''^evidence/engine_improvements/.*\.json$''']
+
+[[rules.allowlists]]
+description = "Host SHA256 screening and proof-search cache identities in the archived live checkpoint"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''^\s*"(screening_key|proof_search_key)": "[0-9a-f]{64}",?\s*$''']
+paths = ['''^evidence/engine_improvements/live_cutover/first_committed_checkpoint\.json$''']
+
+[[rules.allowlists]]
+description = "Audited SHA256 semantic statement identities, not credentials"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''^\s*"statement_key": "(b65476573631f7ff9e94c3c1c94d2d8be12e81fad3f9b281a0c02ee7bae5eac9|5b936bcd4eee7e84e0fb9a197769564236b58c06fee56d74f9ba2ab1e26a6cc6)",\s*$''']
+paths = ['''^autonomous_math/novelty/frontier\.py$''']
+
+[[rules.allowlists]]
+description = "Recomputed token-accounting test file digest in the public manifest"
+condition = "AND"
+regexTarget = "line"
+regexes = ['''^\s*"tests/unit/test_token_accounting\.py": "b2c01472dd15dcb014cd09bd54d5ebc17e33c1d95af16592e6ca1112398249cc",?\s*$''']
+paths = ['''^results/source-manifest\.json$''']

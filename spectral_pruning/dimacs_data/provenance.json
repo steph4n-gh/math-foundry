@@ -1,0 +1,90 @@
+[
+  {
+    "file": "brock200_1.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/brock200_1.clq",
+    "sha256": "8e0607eec7f9ac979fcb1737059ce1b113001a40a8177e454d10f9910fb4d921",
+    "n": 200,
+    "m": 14834,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "brock200_2.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/brock200_2.clq",
+    "sha256": "75658ed5e1c683344ef78a8b65f4bb354704bf2ddd5163df60e4b37f6b1e6adb",
+    "n": 200,
+    "m": 9876,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "c-fat200-1.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/c-fat200-1.clq",
+    "sha256": "8a7ed1e6ccfcee1b6076feb73bba06934df8f31d0ae06c77a63e6ada07e06be6",
+    "n": 200,
+    "m": 1534,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "c-fat200-2.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/c-fat200-2.clq",
+    "sha256": "0a00ce2fb69c4bf3595e936f3942b0849d9bc950dedee32136238abf37cb5842",
+    "n": 200,
+    "m": 3235,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "hamming8-4.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/hamming8-4.clq",
+    "sha256": "e1b7e746eb1a81de6e6b5646f12b652051d1fc5ccc4d42ee5447f1f25389be04",
+    "n": 256,
+    "m": 20864,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "johnson8-2-4.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/johnson8-2-4.clq",
+    "sha256": "dc557bbfa83bd731e3ed1f625b898c7f3636fb169b1cba8c20bd9eeaad0c5b5e",
+    "n": 28,
+    "m": 210,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "johnson8-4-4.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/johnson8-4-4.clq",
+    "sha256": "eac9243edead698f31bdc80760499da335f42b4c38a7dd8f245fe3c5c5a660ab",
+    "n": 70,
+    "m": 1855,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "keller4.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/keller4.clq",
+    "sha256": "9b8e4e71b3057b625ab00e748128f916ce8301bb05acc4163a9152a863feecda",
+    "n": 171,
+    "m": 9435,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "p_hat300-2.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/p_hat300-2.clq",
+    "sha256": "c1a5f5e8670017819ff23925073a9b700376c7b691724fe09a9a65725e561f6e",
+    "n": 300,
+    "m": 21928,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "san200_0.7_1.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/san200_0.7_1.clq",
+    "sha256": "e398bb528073bc09c3c29abf94cdd84faca7f868ef616c833f7fc52caa786cd0",
+    "n": 200,
+    "m": 13930,
+    "provenance": "published DIMACS distribution"
+  },
+  {
+    "file": "san200_0.7_2.clq",
+    "source_url": "https://www.dcs.gla.ac.uk/~pat/maxClique/distribution/DIMACS_cliques/san200_0.7_2.clq",
+    "sha256": "6892a23e789f0e7e99cb971e744a110f6b02d923723c8439d669ff5e2599c363",
+    "n": 200,
+    "m": 13930,
+    "provenance": "published DIMACS distribution"
+  }
+]

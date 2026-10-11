@@ -1,0 +1,144 @@
+{
+  "classification": "KNOWN_FOUNDATIONAL",
+  "code": "C(G) = ker(A_G : (V \u2192 ZMod 2) \u2192\u2097[ZMod 2] (V \u2192 ZMod 2)); variables and checks are separate copies of V.",
+  "scope": "Every finite simple undirected graph; Python exact numerical screening separately limited to graph order 16.",
+  "zero_code_distance": "n+1, including d=1 when n=0",
+  "decoding_claim": "Uniqueness of two kernel codewords agreeing outside an erased set of cardinality at most u; Python peeling implementation is not formally verified.",
+  "toolchain": "leanprover/lean4:v4.34.1",
+  "mathlib_revision": "d13f23b723b8a846827a245b89c10fc7d3f11612",
+  "trusted_translator_sha256": "384cedc5d4b546570ab523d253a2a30de49adf4cc6fb1038084dc93382c14134",
+  "checks": [
+    {
+      "source": "library/coding/unique_neighbor_obstruction.lean",
+      "source_sha256": "69ed0901498883dd208bd4ceaeed6197cf2f82fb08b6d2093a0e0ab99de54ec7",
+      "theorem_name": "unique_neighbor_obstructs_parity_code",
+      "report": "runs/expander_design/unique_neighbor_checked.json",
+      "raw_report_sha256": "6f23d32a1767643e668a1a58a7f641dd1cc59ae201b7c11a82875a7f95e36a3b",
+      "exit_code": 0,
+      "stdout": "'unique_neighbor_obstructs_parity_code' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "stderr": "",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "audit_error": null,
+      "elapsed_sec": 19.514083459042013
+    },
+    {
+      "source": "library/coding/unique_neighbor_distance.lean",
+      "source_sha256": "fde0354b867d056aae097fff88d93a337f1d9e5eeb071b5a9404cc3e042f9e9a",
+      "theorem_name": "parity_code_unique_neighbor_distance",
+      "report": "runs/expander_design/distance_attempt2.json",
+      "raw_report_sha256": "7f8b3ef7a1e23daf4404e16a8893277f5580ebf89b13adf6d24de2d5f584c6ca",
+      "exit_code": 0,
+      "stdout": "'parity_code_unique_neighbor_distance' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "stderr": "",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "audit_error": null,
+      "elapsed_sec": 9.734525833046064
+    },
+    {
+      "source": "library/coding/erasure_recovery.lean",
+      "source_sha256": "561877be1a50f2e820cf0c0741b719f53d7feca0366f4487ed4d0f1756249208",
+      "theorem_name": "parity_code_unique_erasure_recovery",
+      "report": "runs/expander_design/erasure_attempt2.json",
+      "raw_report_sha256": "3a359a4026ba33db5e0175a92f59913f3a0ac1908509a2df1c08a0daefa15008",
+      "exit_code": 0,
+      "stdout": "'parity_code_unique_erasure_recovery' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "stderr": "",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "audit_error": null,
+      "elapsed_sec": 3.0051766249816865
+    },
+    {
+      "source": "library/coding/parity_code_dimension_le_order.lean",
+      "source_sha256": "6f658daed79d24c9083523628478e132d27e2e5ec7c22d920f7e3b4a77e4c6ca",
+      "theorem_name": "parity_code_dimension_le_order",
+      "report": "runs/expander_design/parity_code_dimension_le_order_attempt2.json",
+      "raw_report_sha256": "ee712fae2248abfd5868ccabc19a19ca42fdda1cf5448fed7eaac8c626a78944",
+      "exit_code": 0,
+      "stdout": "'parity_code_dimension_le_order' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "stderr": "",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "audit_error": null,
+      "elapsed_sec": 2.551226707873866
+    },
+    {
+      "source": "library/coding/nonzero_parity_code_distance_le_order.lean",
+      "source_sha256": "096130dbe9166d9053d35f993fc993bd12d591e95d5d6a69ddc126a571f097f1",
+      "theorem_name": "nonzero_parity_code_distance_le_order",
+      "report": "runs/expander_design/nonzero_parity_code_distance_le_order_attempt2.json",
+      "raw_report_sha256": "5f122afc338220d2e992c90c4d47e6a2e74e5d700d0cb058fa1429259ab3928b",
+      "exit_code": 0,
+      "stdout": "'nonzero_parity_code_distance_le_order' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "stderr": "",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "audit_error": null,
+      "elapsed_sec": 2.7333292078692466
+    },
+    {
+      "source": "library/coding/unique_neighbor_radius_nonnegative.lean",
+      "source_sha256": "4690d286ebe37fc348de7cc175e35c85165f7c74b14c9e12a42d3c68c0d7912a",
+      "theorem_name": "unique_neighbor_radius_nonnegative",
+      "report": "runs/expander_design/unique_neighbor_radius_nonnegative_attempt1.json",
+      "raw_report_sha256": "a06cc790b4a0ae389d6fdb756b695cb5a4a2b3b5e74ab1c3a25e419a8339b6f0",
+      "exit_code": 0,
+      "stdout": "'unique_neighbor_radius_nonnegative' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+      "stderr": "",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "audit_error": null,
+      "elapsed_sec": 2.9372032079845667
+    }
+  ],
+  "normal_pipeline_distance_receipt": {
+    "path": "runs/expander_design/bridge_receipt/fde0354b867d056aae097fff88d93a337f1d9e5eeb071b5a9404cc3e042f9e9a.receipt.json",
+    "sha256": "fd92cd97df849bf2f51056507598de5adc48535160ae517e07c8e270b6b99069",
+    "source_sha256": "fde0354b867d056aae097fff88d93a337f1d9e5eeb071b5a9404cc3e042f9e9a",
+    "status": "MACHINE_CHECKED_PROVEN",
+    "attempts_count": 1,
+    "diagnostics": [
+      {
+        "exit_code": 0,
+        "tactic": "classical\n  let words : Finset (V \u2192 ZMod 2) := Finset.univ.filter (fun x => x \u2260 0 \u2227 (G.adjMatrix (ZMod 2)).mulVecLin x = 0)\n  let stops : Finset (Finset V) := Finset.univ.filter (fun S => S.Nonempty \u2227 \u00ac (\u2203 v w, w \u2208 S \u2227 G.Adj v w \u2227 \u2200 u \u2208 S, G.Adj v u \u2192 u = w))\n  let cw : Finset \u2115 := {Fintype.card V + 1} \u222a words.image hammingNorm\n  let sw : Finset \u2115 := {Fintype.card V + 1} \u222a stops.image Finset.card\n  have hcw : cw.Nonempty := by simp [cw]\n  have hsw : sw.Nonempty := by simp [sw]\n  change ((sw.min' hsw - 1 : \u2115) : \u211d) + 1 \u2264 (cw.min' hcw : \u211d)\n  have hpos : 1 \u2264 sw.min' hsw := by\n    apply Finset.le_min'\n    intro a ha\n    rcases Finset.mem_union.mp ha with ha | ha\n    \u00b7 have : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha\n      omega\n    \u00b7 obtain \u27e8S, hS, rfl\u27e9 := Finset.mem_image.mp ha\n      exact (Finset.mem_filter.mp hS).2.1.card_pos\n  have hle : sw.min' hsw \u2264 cw.min' hcw := by\n    apply Finset.le_min'\n    intro a ha\n    rcases Finset.mem_union.mp ha with ha | ha\n    \u00b7 have : a = Fintype.card V + 1 := Finset.mem_singleton.mp ha\n      subst a\n      exact Finset.min'_le _ _ (by simp [sw])\n    \u00b7 obtain \u27e8x, hx, rfl\u27e9 := Finset.mem_image.mp ha\n      have hxne : x \u2260 0 := (Finset.mem_filter.mp hx).2.1\n      have hxcode := (Finset.mem_filter.mp hx).2.2\n      let S : Finset V := Finset.univ.filter (fun w => x w \u2260 0)\n      have hSnonempty : S.Nonempty := by\n        apply Finset.card_pos.mp\n        change 0 < hammingNorm x\n        exact hammingNorm_pos_iff.mpr hxne\n      have hSstop : S \u2208 stops := by\n        apply Finset.mem_filter.mpr\n        refine \u27e8Finset.mem_univ _, hSnonempty, ?_\u27e9\n        rintro \u27e8v, w, hw, hvw, hu\u27e9\n        have hxw : x w \u2260 0 := (Finset.mem_filter.mp hw).2\n        have heq : \u2211 a \u2208 G.neighborFinset v, x a = x w := by\n          apply Finset.sum_eq_single w\n          \u00b7 intro a ha hne\n            by_contra hxa\n            have haS : a \u2208 S := Finset.mem_filter.mpr \u27e8Finset.mem_univ _, hxa\u27e9\n            exact hne (hu a haS ((G.mem_neighborFinset v a).mp ha))\n          \u00b7 intro hnot\n            exact (hnot ((G.mem_neighborFinset v w).mpr hvw)).elim\n        have hzero : \u2211 a \u2208 G.neighborFinset v, x a = 0 := by\n          simpa [Matrix.mulVecLin_apply] using congrFun hxcode v\n        exact hxw (heq.symm.trans hzero)\n      apply Finset.min'_le\n      exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr \u27e8S, hSstop, rfl\u27e9))\n  have hn : sw.min' hsw - 1 + 1 \u2264 cw.min' hcw := by omega\n  exact_mod_cast hn",
+        "axioms": [
+          "propext",
+          "Classical.choice",
+          "Quot.sound"
+        ],
+        "phase": "fixed_tactic",
+        "stdout": "'parity_code_unique_neighbor_distance' depends on axioms: [propext, Classical.choice, Quot.sound]\n",
+        "stderr": "",
+        "success": true,
+        "axiom_audit_error": null,
+        "compiler_launched": true,
+        "compiler_timeout_sec": 10,
+        "failure_kind": null,
+        "selected_lemma_count": 0,
+        "context_declaration_count": 0
+      }
+    ],
+    "verification_time_ms": 11802.564041921869
+  },
+  "timing_note": "Qualification observations only, with shared-host load possible; no performance or speedup claim."
+}

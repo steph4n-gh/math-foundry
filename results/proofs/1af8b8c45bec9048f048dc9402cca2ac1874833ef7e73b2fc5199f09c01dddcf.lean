@@ -1,0 +1,90 @@
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Tactic
+
+
+
+
+
+theorem hull3d_order_ge__1_2_density_average_degree_1_is_tree_39f653f393cf {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.IsTree)) :
+    (Fintype.card V : ℝ) ≥ ((((2 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ))) - (if Fintype.card V < 2 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / ((Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 1)))) + (1 : ℝ)) := by
+  have hcard : G.edgeFinset.card + 1 = Fintype.card V := h_guard.card_edgeFinset
+  rcases (show Fintype.card V = 1 ∨ Fintype.card V = 2 ∨ 3 ≤ Fintype.card V by omega) with h | h | h
+  · have he : G.edgeFinset.card = 0 := by omega
+    norm_num [h, he]
+  · have he : G.edgeFinset.card = 1 := by omega
+    norm_num [h, he]
+  · have hn : (3 : ℝ) ≤ (Fintype.card V : ℝ) := by exact_mod_cast h
+    have hn0 : (0 : ℝ) < (Fintype.card V : ℝ) := by linarith
+    have hn1 : (Fintype.card V : ℝ) - 1 ≠ 0 := by linarith
+    have hz : Fintype.card V ≠ 0 := by omega
+    have ht : ¬ Fintype.card V < 2 := by omega
+    have he : (G.edgeFinset.card : ℝ) + 1 = (Fintype.card V : ℝ) := by
+      exact_mod_cast hcard
+    have he' : (G.edgeFinset.card : ℝ) = (Fintype.card V : ℝ) - 1 := by
+      linarith
+    simp only [if_neg hz, if_neg ht]
+    rw [he']
+    have hf :
+        2 * (2 * ((Fintype.card V : ℝ) - 1) / (Fintype.card V : ℝ)) -
+          2 * ((Fintype.card V : ℝ) - 1) /
+            ((Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 1)) + 1 =
+        (5 * (Fintype.card V : ℝ) - 6) / (Fintype.card V : ℝ) := by
+      field_simp [ne_of_gt hn0, hn1] <;> ring
+    rw [hf]
+    apply (div_le_iff₀ hn0).2
+    have hprod :
+        0 ≤ ((Fintype.card V : ℝ) - 2) * ((Fintype.card V : ℝ) - 3) :=
+      mul_nonneg (by linarith) (by linarith)
+    nlinarith [hprod]
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+theorem hull3d_order_ge__3_3_density_average_degree_1_is_tree_f65c2da0bfec {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (G.IsTree)) :
+    (Fintype.card V : ℝ) ≥ ((((3 : ℝ) * (if Fintype.card V = 0 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / (Fintype.card V : ℝ))) - ((3 : ℝ) * (if Fintype.card V < 2 then (0 : ℝ) else (2 : ℝ) * (G.edgeFinset.card : ℝ) / ((Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 1))))) + (1 : ℝ)) := by
+  have hcard : G.edgeFinset.card + 1 = Fintype.card V := h_guard.card_edgeFinset
+  rcases (show Fintype.card V = 1 ∨ Fintype.card V = 2 ∨ Fintype.card V = 3 ∨ 4 ≤ Fintype.card V by omega) with h | h | h | h
+  · have he : G.edgeFinset.card = 0 := by omega
+    norm_num [h, he]
+  · have he : G.edgeFinset.card = 1 := by omega
+    norm_num [h, he]
+  · have he : G.edgeFinset.card = 2 := by omega
+    norm_num [h, he]
+  · have hn : (4 : ℝ) ≤ (Fintype.card V : ℝ) := by exact_mod_cast h
+    have hn0 : (0 : ℝ) < (Fintype.card V : ℝ) := by linarith
+    have hn1 : (Fintype.card V : ℝ) - 1 ≠ 0 := by linarith
+    have hz : Fintype.card V ≠ 0 := by omega
+    have ht : ¬ Fintype.card V < 2 := by omega
+    have he : (G.edgeFinset.card : ℝ) + 1 = (Fintype.card V : ℝ) := by
+      exact_mod_cast hcard
+    have he' : (G.edgeFinset.card : ℝ) = (Fintype.card V : ℝ) - 1 := by
+      linarith
+    simp only [if_neg hz, if_neg ht]
+    rw [he']
+    have hf :
+        3 * (2 * ((Fintype.card V : ℝ) - 1) / (Fintype.card V : ℝ)) -
+          3 * (2 * ((Fintype.card V : ℝ) - 1) /
+            ((Fintype.card V : ℝ) * ((Fintype.card V : ℝ) - 1))) + 1 =
+        (7 * (Fintype.card V : ℝ) - 12) / (Fintype.card V : ℝ) := by
+      field_simp [ne_of_gt hn0, hn1] <;> ring
+    rw [hf]
+    apply (div_le_iff₀ hn0).2
+    have hprod :
+        0 ≤ ((Fintype.card V : ℝ) - 3) * ((Fintype.card V : ℝ) - 4) :=
+      mul_nonneg (by linarith) (by linarith)
+    nlinarith [hprod]

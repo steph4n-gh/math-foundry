@@ -1,0 +1,121 @@
+import Mathlib.Combinatorics.SimpleGraph.AdjMatrix
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Data.ZMod.Basic
+import Mathlib.InformationTheory.Hamming
+import Mathlib.LinearAlgebra.Dimension.Constructions
+import Mathlib.LinearAlgebra.Matrix.ToLin
+import Mathlib.Tactic
+
+
+
+
+
+
+
+
+
+open scoped BigOperators
+
+theorem parity_code_dimension_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have hn : Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) ≤ Fintype.card V := by
+    calc
+      _ ≤ Module.finrank (ZMod 2) (V → ZMod 2) := Submodule.finrank_le _
+      _ = Fintype.card V := Module.finrank_fintype_fun_eq_card (ZMod 2)
+  exact_mod_cast hn
+
+theorem chromatic_le_order {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≤ (Fintype.card V : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_of_le_natCast G.chromaticNumber_le_card)
+
+theorem archetype_chi_ge_omega {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.chromaticNumber.toNat : ℝ) ≥ (G.cliqueNum : ℝ) := by
+  exact_mod_cast (ENat.toNat_le_toNat G.cliqueNum_le_chromaticNumber (ne_top_of_le_ne_top (by simp) G.chromaticNumber_le_card))
+
+theorem composed_2cd2dd810fbb9720 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (Fintype.card V : ℝ) := by
+  have checked_0 := chromatic_le_order G; have checked_1 := archetype_chi_ge_omega G; linarith
+theorem model_256a48c23c065a850877 {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] (h_guard : (((G.minDegree : ℝ) ≥ (9999999 / 10000000 : ℝ)) ∧ ((Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ) ≥ (9999999 / 10000000 : ℝ)))) :
+    ((G.maxDegree : ℝ) * (Module.finrank (ZMod 2) (LinearMap.ker (G.adjMatrix (ZMod 2)).mulVecLin) : ℝ)) ≤ (((G.maxDegree : ℝ) - (1 : ℝ)) * (Fintype.card V : ℝ)) := by
+  classical
+  let A : Matrix V V (ZMod 2) := G.adjMatrix (ZMod 2)
+  have hdeg : 0 < G.minDegree := by
+    by_contra h
+    have hz : G.minDegree = 0 := Nat.eq_zero_of_not_pos h
+    have hh := h_guard.1
+    rw [hz] at hh
+    norm_num at hh
+  obtain ⟨s, hs, hcard, hspan, _⟩ :=
+    Submodule.exists_finset_span_eq_linearIndepOn (ZMod 2) (Set.range A.col)
+  let supp : (V → ZMod 2) → Finset V :=
+    fun x => Finset.univ.filter (fun v => x v ≠ 0)
+  have hcover : s.biUnion supp = Finset.univ := by
+    apply Finset.eq_univ_of_forall
+    intro v
+    by_contra hv
+    have hzero : ∀ x ∈ s, x v = 0 := by
+      intro x hx
+      by_contra hxv
+      exact hv (Finset.mem_biUnion.mpr
+        ⟨x, hx, Finset.mem_filter.mpr ⟨Finset.mem_univ v, hxv⟩⟩)
+    have hall : ∀ x ∈ Submodule.span (ZMod 2) (s : Set (V → ZMod 2)),
+        x v = 0 := by
+      intro x hx
+      induction hx using Submodule.span_induction with
+      | mem y hy => exact hzero y hy
+      | zero => rfl
+      | add x y hx hy ihx ihy => simp [ihx, ihy]
+      | smul a x hx ih => simp [ih]
+    obtain ⟨w, hvw⟩ := (G.degree_pos_iff_exists_adj v).mp
+      (lt_of_lt_of_le hdeg (G.minDegree_le_degree v))
+    have hmem : A.col w ∈ Submodule.span (ZMod 2) (s : Set (V → ZMod 2)) := by
+      rw [hspan]
+      exact Submodule.subset_span (Set.mem_range_self w)
+    have hz := hall (A.col w) hmem
+    change (if G.Adj v w then (1 : ZMod 2) else 0) = 0 at hz
+    rw [if_pos hvw] at hz
+    exact one_ne_zero hz
+  have hsupp : ∀ x ∈ s, (supp x).card ≤ G.maxDegree := by
+    intro x hx
+    obtain ⟨w, rfl⟩ := hs hx
+    calc
+      (supp (A.col w)).card ≤ (G.neighborFinset w).card := by
+        apply Finset.card_le_card
+        intro v hv
+        apply (G.mem_neighborFinset w v).mpr
+        apply G.adj_symm
+        by_contra h
+        have hv' : A.col w v ≠ 0 := (Finset.mem_filter.mp hv).2
+        apply hv'
+        change (if G.Adj v w then (1 : ZMod 2) else 0) = 0
+        exact if_neg h
+      _ = G.degree w := G.card_neighborFinset_eq_degree w
+      _ ≤ G.maxDegree := G.degree_le_maxDegree w
+  have hbound : Fintype.card V ≤ s.card * G.maxDegree := by
+    calc
+      Fintype.card V = (s.biUnion supp).card := by
+        rw [hcover, Finset.card_univ]
+      _ ≤ s.card * G.maxDegree :=
+        Finset.card_biUnion_le_card_mul s supp G.maxDegree hsupp
+  have hnull : s.card + Module.finrank (ZMod 2) (LinearMap.ker A.mulVecLin) =
+      Fintype.card V := by
+    rw [hcard, ← Matrix.range_mulVecLin]
+    simpa only [Module.finrank_fintype_fun_eq_card] using
+      LinearMap.finrank_range_add_finrank_ker A.mulVecLin
+  have hboundR : (Fintype.card V : ℝ) ≤ (s.card : ℝ) * (G.maxDegree : ℝ) := by
+    exact_mod_cast hbound
+  have hnullR : (s.card : ℝ) +
+      (Module.finrank (ZMod 2) (LinearMap.ker A.mulVecLin) : ℝ) =
+      (Fintype.card V : ℝ) := by
+    exact_mod_cast hnull
+  change (G.maxDegree : ℝ) *
+      (Module.finrank (ZMod 2) (LinearMap.ker A.mulVecLin) : ℝ) ≤
+      ((G.maxDegree : ℝ) - 1) * (Fintype.card V : ℝ)
+  nlinarith only [hboundR,
+    congrArg (fun x : ℝ => (G.maxDegree : ℝ) * x) hnullR]
