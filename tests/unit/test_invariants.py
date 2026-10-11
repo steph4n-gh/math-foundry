@@ -232,8 +232,8 @@ class TestInvariantsEvaluation:
         assert len(evals_pet) == 10
         assert np.isclose(evals_pet[0], 3.0)
         assert np.isclose(evals_pet[-1], -2.0)
-        assert compute_spectral_radius(graph_petersen) == 3.0
-        assert compute_smallest_adjacency_eigenvalue(graph_petersen) == -2.0
+        assert np.isclose(compute_spectral_radius(graph_petersen), 3.0, rtol=0, atol=1e-12)
+        assert np.isclose(compute_smallest_adjacency_eigenvalue(graph_petersen), -2.0, rtol=0, atol=1e-12)
 
         # C5 spectrum: 2, (sqrt(5)-1)/2, (sqrt(5)-1)/2, -(1+sqrt(5))/2, -(1+sqrt(5))/2
         evals_c5 = compute_adjacency_spectrum(graph_c5)
