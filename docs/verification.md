@@ -1,5 +1,7 @@
 # Verification and reproduction
 
+For a first Python-only check, run the [adjacency-code example](adjacency-code-example.md); it requires no account, AI or Lean. To validate the public proof catalogue without compiling it, run `python scripts/replay_results.py --check-only --output runs/catalog-check.json` from the checkout root. Use a fresh report path on repeat. Kernel replay additionally requires the pinned Lean workspace; the public [README](../README.md) provides the short setup and full-corpus replay command.
+
 Run the full test suite after installing Python dependencies and preparing the pinned Lean workspace:
 
 ```sh
@@ -15,7 +17,7 @@ The retained `seed/counterexamples.json` is an explicit source-controlled mathem
 Clone the frozen committed checkout into a separate directory. Replace the source path below with that checkout, or with the selected repository URL after publication:
 
 ```sh
-git clone /path/to/frozen/math-foundry math-foundry-replay
+git clone https://github.com/steph4n-gh/math-foundry.git math-foundry-replay
 cd math-foundry-replay
 python3 -m venv .venv
 source .venv/bin/activate
@@ -24,7 +26,6 @@ export PATH="$HOME/.elan/bin:$PATH"
 test -x "$HOME/.elan/bin/elan"
 elan toolchain install leanprover/lean4:v4.34.1
 cd certified_lean
-lake update
 lake exe cache get
 lake env lean --version
 ```
@@ -124,11 +125,13 @@ Catalog and challenger results distinguish visited graphs from applicable, defin
 
 ## Frozen generative comparison
 
+The original runtime `research_outputs` directory is excluded from the public snapshot. First complete the foundation-replay recipe above to create current receipts in `runs/foundation-replay`. These evaluator recipes consume that locally generated seed, not an archival atlas supplied by the release. The generative model arms require your own authenticated Codex CLI account.
+
 Prepare a fresh destination using an atlas containing valid receipts for exactly the seven catalog foundations. The evaluator selects those foundations even when the live atlas contains additional proofs. Run the arms sequentially against the same frozen sources and model configuration:
 
 ```sh
 python -B evaluate_generative.py prepare \
-  --seed-dir research_outputs --output-dir runs/generative-comparison
+  --seed-dir runs/foundation-replay --output-dir runs/generative-comparison
 python -B evaluate_generative.py run-arm \
   --output-dir runs/generative-comparison --arm fixed
 python -B evaluate_generative.py run-arm \
@@ -144,9 +147,11 @@ Only successful training proofs from the current learning arm can expand its lib
 
 ## Controlled proof transfer
 
+Use the locally rebuilt foundation receipts described above. A fresh public checkout does not include the historical `research_outputs` seed.
+
 ```sh
 python -B evaluate_self_improvement.py \
-  --seed-dir research_outputs \
+  --seed-dir runs/foundation-replay \
   --output-dir runs/proof-transfer --trials 2 \
   --max-attempts 4 --timeout-per-attempt 10 --budget-per-arm 240
 ```

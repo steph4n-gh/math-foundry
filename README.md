@@ -1,8 +1,21 @@
 # Math Foundry
 
+[![Verify engine and proof snapshot](https://github.com/steph4n-gh/math-foundry/actions/workflows/verify.yml/badge.svg)](https://github.com/steph4n-gh/math-foundry/actions/workflows/verify.yml)
+
 Math Foundry proposes graph inequalities, searches for counterexamples, and attempts proofs against genuine pinned Lean and Mathlib. It stores exact statements, guards, proof sources and verification evidence so others can inspect, replay and build on the work.
 
-This public snapshot contains **341 Lean-certified proof artifacts from checkpoint 275**, frozen on 11 October 2026. All had passing saved independent replays at that boundary. The count includes known results, helpers, specializations and routine consequences; **no mathematical originality is established**. Fresh replay on your machine is a separate check. The project remains a research prototype, with no established general discovery-rate advantage or completed 24-hour release qualification.
+This public snapshot contains **341 Lean-certified proof artifacts from checkpoint 275**, frozen on 11 October 2026. All had passing saved independent replays at that boundary and passed [fresh independent Linux replays on GitHub](https://github.com/steph4n-gh/math-foundry/actions/runs/38175444941). The count includes known results, helpers, specializations and routine consequences; **no mathematical originality is established**. The project remains a research prototype, with no established general discovery-rate advantage or completed 24-hour release qualification.
+
+## Choose a starting point
+
+| What you want to do | Start here | AI required? |
+| --- | --- | --- |
+| Read or reuse a checked theorem | [Proof index](results/README.md) and [using one proof](docs/using-proofs.md) | No |
+| Try a small graph/coding experiment | [Worked adjacency-code example](docs/adjacency-code-example.md) | No |
+| Explore conjectures and counterexamples | [Local exploration](#explore-locally) | No |
+| Add optional model generation and proof attempts | [Model-assisted research](#optional-model-assisted-research) | Your own account |
+
+The proof archive preserves exact independently replayable sources. It is not yet a single namespaced Lean library that can be imported as a whole; the [reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) explains the current workflow.
 
 ## Start without AI
 
@@ -26,14 +39,23 @@ For kernel replay, install [Elan](https://github.com/leanprover/elan#installatio
 cd certified_lean
 "$HOME/.elan/bin/lake" exe cache get
 cd ..
-python scripts/replay_results.py --limit 3 --timeout 60 --output runs/replay-first3.json
+python scripts/replay_results.py --id archetype_chi_ge_omega \
+  --timeout 60 --output runs/clique-replay.json
 ```
 
-Lean is pinned to **4.34.1** and Mathlib to **d13f23b723b8a846827a245b89c10fc7d3f11612**. Dependency setup downloads upstream packages and build caches; replay uses the local compiler. Omit `--limit` for the full corpus. `--shard-index 0 --shard-count 4` selects one of four disjoint shards; `--output` saves a report. Use a fresh report path when repeating a command; existing reports are never overwritten. A timeout is an unresolved replay, not a disproof.
+Lean is pinned to **4.34.1** and Mathlib to **d13f23b723b8a846827a245b89c10fc7d3f11612**. Dependency setup downloads upstream packages and build caches; replay uses the local compiler. Repeat `--id` to select named theorems, use `--limit 3` for a small sample, or omit both for the full corpus. `--shard-index 0 --shard-count 4` selects one of four disjoint shards; `--output` saves a report. Use a fresh report path when repeating a command; existing reports are never overwritten. A timeout is an unresolved replay, not a disproof.
 
 Browse [results/catalog.json](results/catalog.json) for each exact structured statement and its source/challenge bindings, and the [investigated originality notes](results/originality-notes.md) for three routine comparisons. The frozen assessments comprise 27 known results, 54 routine consequences and 260 awaiting review; automated labels are preserved as provisional metadata. Sources contain their required checked parents. Companion challenges describe exact targets; compile the proof sources through the replay script rather than treating challenge placeholders as proofs.
 
 ## Explore locally
+
+For a quick, deterministic example with expected output:
+
+```sh
+python -B -m examples.adjacency_code_demo
+```
+
+It constructs a four-cycle, computes its exact binary adjacency code and tests erasure recovery. The [worked guide](docs/adjacency-code-example.md) connects those finite computations to the checked universal distance and recovery statements.
 
 A small deterministic run needs no AI account:
 

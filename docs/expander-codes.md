@@ -16,9 +16,13 @@ The numerical evaluator is exact only for `n ≤ 16`. It enumerates binary suppo
 
 The numerical `peel_erasures` function performs check-based erasure peeling and retains its steps. It returns `DECODED`, `BLOCKED`, or `INCONSISTENT`; a blocked decoder does not imply that no completion exists. Unique-neighbor structure supplies a mathematical route to recovery bounds. This campaign does not establish cryptographic security, asymptotic goodness, general error correction, or a performance advantage.
 
+## Try a graph without AI or Lean
+
+Start with the [adjacency-code worked example](adjacency-code-example.md). It computes exact code parameters and an erasure-peeling trace without starting a campaign, a compiler or model requests. It needs only the installed Python dependencies.
+
 ## Running the focus
 
-From a prepared checkout, use a dedicated output directory for an independent campaign:
+The model-assisted campaign below additionally requires the prepared Lean workspace and your own authenticated Codex CLI account. These are optional resource choices, not the public checkout's default settings. Use a dedicated output directory for an independent campaign:
 
 ```sh
 python -B run_research.py --continuous --campaign expander_codes \

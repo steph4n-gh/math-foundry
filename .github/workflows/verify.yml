@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   OMP_NUM_THREADS: "1"
@@ -55,6 +55,44 @@ jobs:
           lake env lean --version
           test "$(git -C .lake/packages/mathlib rev-parse HEAD)" = d13f23b723b8a846827a245b89c10fc7d3f11612
           git diff --exit-code -- lean-toolchain lakefile.lean lake-manifest.json
+      - name: Run account-free adjacency-code example
+        run: timeout 60 python -B -m examples.adjacency_code_demo
+      - name: Replay one named archived proof
+        run: >-
+          python scripts/replay_results.py --id archetype_chi_ge_omega
+          --timeout 60 --output runs/ci-named-replay.json
+      - name: Compile standalone reuse example and audit its axioms
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          from autonomous_math.prover.lean_prover import LeanToolchain, _target_axiom_report
+          from autonomous_math.research_state import ALLOWED_AXIOMS
+
+          source = Path("examples/ReuseCliqueBound.lean").read_text()
+          target = "MathFoundryExamples.clique_bound"
+          report = {"source_sha256": hashlib.sha256(source.encode()).hexdigest(),
+                    "theorem_name": target, "timeout_sec": 60, "model_requests": 0}
+          toolchain = LeanToolchain()
+          try:
+              code, stdout, stderr = toolchain.run_lean_code(source, timeout=60)
+              axioms, error = _target_axiom_report(stdout, target)
+              passed = (code == 0 and error is None and set(axioms) <= ALLOWED_AXIOMS
+                        and "error:" not in stdout + stderr
+                        and "declaration uses" not in stdout + stderr)
+              report.update(exit_code=code, stdout=stdout, stderr=stderr, axioms=axioms,
+                            axiom_audit_error=error, passed=passed,
+                            compiler_transport=dict(toolchain.last_run_metadata))
+          finally:
+              toolchain.cancel()
+              report["remaining_owned_process_groups"] = toolchain.active_process_groups()
+              Path("runs").mkdir(exist_ok=True)
+              Path("runs/ci-example-reuse.json").write_text(json.dumps(report, indent=2) + "\n")
+          if not report.get("passed") or report["remaining_owned_process_groups"]:
+              raise SystemExit("Standalone reuse example failed exact kernel/allowed-axiom verification")
+          print("Standalone reuse example passed; axioms:", ", ".join(axioms) or "none")
+          PY
       - name: Run tests without a model provider
         run: python -m pytest -q --junitxml=runs/ci-tests.xml
       - name: Retain test report
@@ -62,7 +100,10 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: engine-tests
-          path: runs/ci-tests.xml
+          path: |
+            runs/ci-tests.xml
+            runs/ci-named-replay.json
+            runs/ci-example-reuse.json
           if-no-files-found: warn
 
   replay:

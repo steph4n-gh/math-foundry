@@ -119,6 +119,51 @@ def test_shards_are_disjoint_complete_and_limit_is_applied_after_shard(collectio
     assert replay.select_records(records, 0, 2, 1) == left[:1]
 
 
+def test_repeated_id_cli_preserves_catalog_order_and_full_binding_checks(collection, monkeypatch):
+    monkeypatch.setattr(replay, "LeanToolchain", lambda **kw: pytest.fail("check-only invoked Lean"))
+    code, report = invoke(collection, "--check-only", "--id", "portable_2", "--id", "portable_0")
+    assert code == 0 and report["binding_checked_count"] == 3 and report["selected_count"] == 2
+    assert report["requested_ids"] == ["portable_2", "portable_0"]
+    assert [row["id"] for row in report["records"]] == ["portable_0", "portable_2"]
+    assert report["model_requests"] == 0 and report["kernel_replay_performed"] is False
+
+
+def test_id_filter_preserves_catalog_position_shards_then_applies_limit(collection):
+    code, report = invoke(collection, "--check-only", "--id", "portable_1", "--id", "portable_2",
+        "--shard-index", "0", "--shard-count", "2", "--limit", "1")
+    assert code == 0 and [row["id"] for row in report["records"]] == ["portable_2"]
+    assert report["binding_checked_count"] == 3
+
+
+@pytest.mark.parametrize("selection", [["missing"], ["portable_0", "missing"], [""]])
+def test_unknown_or_empty_id_cli_fails_before_compiler_even_with_limit(collection, monkeypatch, selection):
+    monkeypatch.setattr(replay, "LeanToolchain", lambda **kw: pytest.fail("unknown ID invoked Lean"))
+    args = [part for identifier in selection for part in ("--id", identifier)]
+    code, report = invoke(collection, "--limit", "1", *args)
+    assert code == 1 and report["status"] == "failed" and "Unknown theorem ID" in report["error"]
+    assert report["selected_count"] == 0 and not report["kernel_replay_performed"]
+    assert report["binding_checked_count"] == 3
+
+
+def test_known_id_outside_requested_shard_refuses_empty_result(collection, monkeypatch):
+    monkeypatch.setattr(replay, "LeanToolchain", lambda **kw: pytest.fail("empty selection invoked Lean"))
+    code, report = invoke(collection, "--id", "portable_1", "--shard-index", "0", "--shard-count", "2")
+    assert code == 1 and "No records selected" in report["error"]
+
+
+def test_named_selection_cannot_ignore_tampered_unselected_proof(collection, monkeypatch):
+    root, records, _, _ = collection
+    (root / records[2]["challenge_path"]).write_text("tampered unselected challenge")
+    monkeypatch.setattr(replay, "LeanToolchain", lambda **kw: pytest.fail("tamper invoked Lean"))
+    code, report = invoke(collection, "--id", "portable_0")
+    assert code == 1 and "Changed challenge" in report["error"]
+
+
+def test_empty_explicit_id_collection_is_not_equivalent_to_select_all(collection):
+    with pytest.raises(ValueError, match="At least one theorem ID"):
+        replay.select_records(collection[1], ids=[])
+
+
 @pytest.mark.parametrize("args", [(0, 0, None), (2, 2, None), (-1, 2, None), (0, 1, 0), (3, 4, None)])
 def test_invalid_or_empty_shards_do_not_report_vacuous_success(collection, args):
     with pytest.raises(ValueError): replay.select_records(collection[1], *args)
@@ -153,6 +198,15 @@ def fake_toolchain(monkeypatch, behavior):
     monkeypatch.setattr(replay, "LeanToolchain", Toolchain)
     monkeypatch.setattr(replay, "_compiler_identity", lambda tc: {"version": "Fixture", "binary_sha256": "a" * 64})
     return instances
+
+
+def test_duplicate_requested_id_replays_once_with_unchanged_cap_and_cleanup(collection, monkeypatch):
+    instances = fake_toolchain(monkeypatch, lambda source, timeout:
+        (0, "'portable_1' depends on axioms: [propext]\n", ""))
+    code, report = invoke(collection, "--id", "portable_1", "--id", "portable_1", "--timeout", "19")
+    assert code == 0 and report["selected_count"] == 1 and report["binding_checked_count"] == 3
+    assert report["records"][0]["id"] == "portable_1" and report["kernel_passed_count"] == 1
+    assert len(instances[0].calls) == 1 and instances[0].calls[0][1] == 19 and instances[0].cancelled
 
 
 @pytest.mark.parametrize("result,expected", [

@@ -93,10 +93,20 @@ def load_catalog(path, root):
     return records, hashlib.sha256(raw).hexdigest()
 
 
-def select_records(records, shard_index=0, shard_count=1, limit=None):
+def select_records(records, shard_index=0, shard_count=1, limit=None, ids=None):
     if shard_count < 1 or not 0 <= shard_index < shard_count or (limit is not None and limit < 1):
         raise ValueError("Invalid shard or positive limit")
-    selected = [record for index, record in enumerate(records) if index % shard_count == shard_index]
+    requested = None if ids is None else set(ids)
+    if requested is not None:
+        if not requested:
+            raise ValueError("At least one theorem ID must be selected")
+        unknown = requested - {record["id"] for record in records}
+        if unknown:
+            raise ValueError("Unknown theorem ID(s): " + ", ".join(sorted(unknown)))
+    # Shards retain their original catalog positions; filtering never moves a
+    # proof into a different shard. Repeated IDs replay that proof only once.
+    selected = [record for index, record in enumerate(records)
+        if index % shard_count == shard_index and (requested is None or record["id"] in requested)]
     if limit is not None:
         selected = selected[:limit]
     if not selected:
@@ -135,6 +145,7 @@ def main(argv=None):
     parser.add_argument("--timeout", type=float, default=60, help="Finite per-proof compiler cap, at most 120 seconds")
     parser.add_argument("--shard-index", type=int, default=0)
     parser.add_argument("--shard-count", type=int, default=1)
+    parser.add_argument("--id", dest="ids", action="append", help="Exact theorem ID; repeat for several proofs. Filter the catalog-position shard before --limit")
     parser.add_argument("--limit", type=int)
     parser.add_argument("--output", type=Path, default=ROOT / "runs/public-replay.json", help="Fresh report path; never overwrite")
     args = parser.parse_args(argv)
@@ -149,7 +160,7 @@ def main(argv=None):
     report = {"schema_version": 1, "status": "failed", "mode": "binding_check" if args.check_only else "kernel_replay",
         "model_requests": 0, "kernel_replay_performed": False, "started_at": time.time(),
         "timeout_sec": args.timeout, "shard_index": args.shard_index, "shard_count": args.shard_count,
-        "limit": args.limit, "binding_checked_count": 0, "selected_count": 0, "records": [],
+        "limit": args.limit, "requested_ids": args.ids, "binding_checked_count": 0, "selected_count": 0, "records": [],
         "scope": "Exact result bytes/AST bindings and optional fresh local kernel replay; no originality or release qualification."}
     toolchain = None
     old_handler = signal.getsignal(signal.SIGTERM)
@@ -159,11 +170,12 @@ def main(argv=None):
     exit_code = 1
     try:
         records, catalog_hash = load_catalog(args.catalog, ROOT)
-        selected = select_records(records, args.shard_index, args.shard_count, args.limit)
-        report.update(catalog_sha256=catalog_hash, binding_checked_count=len(records), selected_count=len(selected),
+        report.update(catalog_sha256=catalog_hash, binding_checked_count=len(records),
             validator_source_hashes={"script": sha256(Path(__file__)), "trusted_lean": sha256(Path(trusted_lean.__file__)),
                 "lean_prover": sha256(Path(lean_prover.__file__)), "ast": sha256(Path(ast.__file__)),
                 "research_state": sha256(Path(research_state.__file__))})
+        selected = select_records(records, args.shard_index, args.shard_count, args.limit, args.ids)
+        report["selected_count"] = len(selected)
         workspace = args.workspace.resolve()
         report["workspace"] = _workspace_configuration(workspace)
         if not args.check_only:
