@@ -23,7 +23,7 @@ jobs:
   tests:
     name: Offline engine tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -93,6 +93,12 @@ jobs:
               raise SystemExit("Standalone reuse example failed exact kernel/allowed-axiom verification")
           print("Standalone reuse example passed; axioms:", ", ".join(axioms) or "none")
           PY
+      - name: Build an independent Git-based Lean library consumer
+        run: >-
+          python scripts/check_lean_library.py
+          --git-repository "$GITHUB_WORKSPACE" --revision "$GITHUB_SHA"
+          --build-timeout 2400 --timeout 3000
+          --output runs/ci-library-consumer.json
       - name: Run tests without a model provider
         run: python -m pytest -q --junitxml=runs/ci-tests.xml
       - name: Retain test report
@@ -104,6 +110,7 @@ jobs:
             runs/ci-tests.xml
             runs/ci-named-replay.json
             runs/ci-example-reuse.json
+            runs/ci-library-consumer.json
           if-no-files-found: warn
 
   replay:

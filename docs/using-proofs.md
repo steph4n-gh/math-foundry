@@ -100,6 +100,16 @@ The eight foundation exports retain their existing theorem names: `MathFoundry.a
 
 For all 341 targets, change the first line to `import MathFoundry`. Each is available as `MathFoundry.Archive.<theorem_name>.<theorem_name>`, with its checked prerequisites isolated in that same namespace. Raw catalog IDs containing punctuation use the catalog's sanitized `theorem_name`. To import only one artifact, use its module `MathFoundry.Archive.<theorem_name>`.
 
+For a full first build, prebuild the archive modules serially before `lake build`. This is the same approach used by CI to keep first-party compiler concurrency bounded; Lake's thread setting alone is not a compiler-process admission limit:
+
+```sh
+for proof_file in .lake/packages/certifiedResearch/certified_lean/MathFoundry/Archive/*.lean; do
+  proof_name=$(basename "$proof_file" .lean)
+  lake build "certifiedResearch/+MathFoundry.Archive.$proof_name:olean" || exit 1
+done
+lake build
+```
+
 The [library manifest](../certified_lean/MathFoundry/manifest.json) maps every original ID to its module, qualified theorem, original source/challenge hashes and generated-module hash. It is a packaging record; it does not grant originality or replace fresh kernel verification. Complete statements and guards remain in the [result catalog](../results/catalog.json).
 
 [ImportFoundry.lean](../examples/ImportFoundry.lean) is a separate consumer example used by CI. CI clones the checked commit as an actual Lake dependency, builds the complete library, compiles this consumer and audits all 341 target axioms, all eight exported names and the consumer theorem. This adds no new research result to the snapshot count.
