@@ -86,7 +86,7 @@ The binary adjacency kernel is a subspace of the vertex-coordinate space, so its
 
 ## Replay the theorem you choose
 
-After the [pinned setup](../README.md#start-without-ai):
+After the [pinned setup](../docs/running-engine.md#start-without-ai):
 
 ```sh
 python scripts/replay_results.py --id archetype_chi_ge_omega \

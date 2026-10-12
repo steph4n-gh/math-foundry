@@ -30,7 +30,7 @@ Change the search term to an invariant such as `chromatic_number`, `spectral_rad
 
 ## Replay the exact retained bytes
 
-Complete the [Python and pinned Lean setup](../README.md#start-without-ai), then run from the repository root:
+Complete the [Python and pinned Lean setup](running-engine.md#start-without-ai), then run from the repository root:
 
 ```sh
 python scripts/replay_results.py --id archetype_chi_ge_omega \

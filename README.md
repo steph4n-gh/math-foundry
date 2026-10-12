@@ -2,32 +2,74 @@
 
 [![Verify engine and proof snapshot](https://github.com/steph4n-gh/math-foundry/actions/workflows/verify.yml/badge.svg)](https://github.com/steph4n-gh/math-foundry/actions/workflows/verify.yml)
 
-Math Foundry is an **importable Lean library of graph and binary-code proofs**, alongside an experimental engine that proposes inequalities, searches for counterexamples and attempts formal proofs. Exact statements, guards, proof sources and verification evidence are retained so you can inspect, replay and build on the work.
+**Read a theorem. Understand the argument. Reuse its Lean proof.**
 
-**Reusing the Lean library requires no AI account and no Python installation.** Start with the [proof index](results/README.md), the [reuse guide](docs/using-proofs.md) or the [practical Lean examples](docs/lean-examples.md).
+Math Foundry publishes **341 checked Lean 4 proof artifacts** about finite simple
+graphs and binary adjacency codes. The collection includes known theorems,
+helpers, specializations and routine consequences. No original mathematical
+result is established. You can read and use the proofs without an AI account.
 
-This public snapshot contains **341 Lean-certified proof artifacts from checkpoint 275**, frozen on **2026-10-11**. All had passing saved independent replays at that boundary. The [successful Linux verification](https://github.com/steph4n-gh/math-foundry/actions/runs/38182698567) also built the importable library, checked a separate consumer project and audited the exported targets' axioms. The count includes known results, helpers, specializations and routine consequences; **no mathematical originality is established**. The engine remains a research prototype, with no established general discovery-rate advantage or completed 24-hour release qualification.
+## Start with a proof
 
-## Choose a starting point
+Here are five entry points, with explanations and direct links to the theorem
+declarations. For a graph, **n** counts vertices, **m** counts edges, **χ** is the
+chromatic number, **ω** the largest clique size, **Δ** the maximum degree and
+**ρ** the adjacency spectral radius.
 
-| What you want to do | Start here | AI required? |
+| Result | What it tells you | Read the argument | Read the Lean proof |
+| --- | --- | --- | --- |
+| **χ ≥ ω** | A clique forces its vertices to have different colors. | [Clique versus coloring](docs/proof-walkthroughs.md#clique-versus-coloring) | [Proof](certified_lean/MathFoundry/Archive/archetype_chi_ge_omega.lean#L18) |
+| **χ ≤ Δ + 1** | Maximum degree gives a guaranteed coloring upper bound. | [Greedy coloring](docs/proof-walkthroughs.md#greedy-coloring) | [Proof](certified_lean/MathFoundry/Archive/archetype_brooks_standard.lean#L61) |
+| **χ ≤ ρ + 1** | The adjacency spectrum also bounds the number of colors. | [Wilf's spectral bound](docs/proof-walkthroughs.md#wilfs-spectral-coloring-bound) | [Proof](certified_lean/MathFoundry/Archive/archetype_spectral_wilf.lean#L105) |
+| **E ≤ √(2mn)** | Edge count and graph order bound adjacency energy E. | [McClelland's energy bound](docs/proof-walkthroughs.md#mcclellands-energy-bound) | [Proof](certified_lean/MathFoundry/Archive/mcclelland_graph_energy_upper.lean#L238) |
+| **k ≤ n** | The binary adjacency kernel has dimension at most n. | [Code dimension](docs/proof-walkthroughs.md#binary-adjacency-code-dimension) | [Proof](certified_lean/MathFoundry/Archive/parity_code_dimension_le_order.lean#L46) |
+
+**[Read the five walkthroughs →](docs/proof-walkthroughs.md)**
+
+The walkthroughs explain the notation, assumptions, proof ideas and their
+connections to the actual Lean source. The coloring bound above is the standard
+greedy bound; its historical source name does not claim the sharper Brooks theorem.
+
+## Browse the whole collection
+
+Every entry in the full index includes its complete rendered statement and a
+link to the retained proof source. Conditional results keep their premises.
+
+| Subject | Open the proofs | Artifacts |
 | --- | --- | --- |
-| Import and build on checked theorems | [Lean reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) and [practical examples](docs/lean-examples.md) | No |
-| Inspect or replay a specific result | [Proof index](results/README.md) and [replay guide](docs/using-proofs.md#replay-the-exact-retained-bytes) | No |
-| Try a small graph/coding experiment | [Worked adjacency-code example](docs/adjacency-code-example.md) | No |
-| Explore conjectures and counterexamples | [Local exploration](#explore-locally) | No |
-| Add optional model generation and proof attempts | [Model-assisted research](#optional-model-assisted-research) | Your own account |
+| Coloring, cliques and independence | [Browse](results/all-proofs.md#coloring-cliques-and-independence) | 72 |
+| Spectral bounds | [Browse](results/all-proofs.md#spectral-bounds) | 91 |
+| Energy and Estrada index | [Browse](results/all-proofs.md#energy-and-estrada-index) | 49 |
+| Adjacency codes and unique neighbors | [Browse](results/all-proofs.md#adjacency-codes-and-unique-neighbors) | 107 |
+| Degree, density and triangles | [Browse](results/all-proofs.md#degree-density-and-triangles) | 22 |
 
-## Use the Lean library
+**[All 341 statements and proofs →](results/all-proofs.md)** ·
+[Eight foundation results explained](results/README.md#useful-starting-points) ·
+[Machine-readable catalog](results/catalog.json)
 
-Install [Elan](https://github.com/leanprover/elan#installation) and use Lean **4.34.1**. Add the package to your Lake project:
+## Build something with the proofs
+
+The [practical examples](docs/lean-examples.md) show three ways to use the library:
+
+- [Rule out a proposed three-coloring](docs/lean-examples.md#rule-out-a-proposed-coloring) using a certified clique bound.
+- [Certify an exact chromatic number](docs/lean-examples.md#certify-an-exact-chromatic-number) when lower and upper bounds meet.
+- [Bound a binary adjacency-code dimension](docs/lean-examples.md#bound-a-binary-adjacency-code-dimension) for a graph on 16 vertices.
+
+Their complete, checked source is [ImportFoundry.lean](examples/ImportFoundry.lean).
+For a numerical example you can run, the
+[four-cycle walkthrough](docs/adjacency-code-example.md) constructs codewords and
+tests erasure recovery, while distinguishing those finite checks from universal proofs.
+
+### Import into your Lean project
+
+Use Lean **4.34.1** and add this Lake dependency:
 
 ```lean
 require certifiedResearch from git
   "https://github.com/steph4n-gh/math-foundry.git" @ "main" / "certified_lean"
 ```
 
-Then import the eight foundation results and use a checked theorem directly:
+Then use a checked result directly:
 
 ```lean
 import MathFoundry.Foundations
@@ -38,96 +80,54 @@ theorem clique_bound {V : Type*} [Fintype V] [DecidableEq V]
   exact MathFoundry.archetype_chi_ge_omega G
 ```
 
-The [reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) provides complete project files, setup commands and axiom checks. The [practical examples](docs/lean-examples.md) show how to build further results from the library. Dependency setup downloads Lean and Mathlib sources or caches; it makes no model requests. After resolving the dependency, commit your Lake lockfile and pin the resolved Math Foundry commit instead of `"main"` for reproducibility.
+**[Complete project files and setup commands →](docs/using-proofs.md#reuse-in-your-own-lean-project)**
 
-Use `import MathFoundry` for all 341 targets, or import an individual `MathFoundry.Archive.<theorem_name>` module. The [library manifest](certified_lean/MathFoundry/manifest.json) maps catalog IDs to modules and qualified theorem names; exact premises remain in [results/catalog.json](results/catalog.json). Lean is pinned to **4.34.1** and Mathlib to **d13f23b723b8a846827a245b89c10fc7d3f11612**.
+Lean reuse requires no Python or model account. `MathFoundry.Foundations` exports
+eight starting results; `import MathFoundry` imports all 341 targets. Individual
+archive modules are also available. The
+[manifest](certified_lean/MathFoundry/manifest.json) maps catalog IDs to imports and
+qualified theorem names. Pin the resolved Math Foundry commit and retain your
+Lake lockfile for reproducibility. Mathlib is pinned to
+**d13f23b723b8a846827a245b89c10fc7d3f11612**.
 
-## Start without AI
+## What has been checked
 
-For artifact inspection, standalone replay and local experiments, use Python **3.11 or newer** on macOS or Linux. Work from the checkout root; the Lean workspace is separate from the Python package.
+This is a frozen **checkpoint 275** snapshot from **2026-10-11**. All 341 artifacts
+had passing saved independent replays at that boundary. The
+[successful Linux verification](https://github.com/steph4n-gh/math-foundry/actions/runs/38182698567)
+also built the importable library, checked a separate consumer project and audited
+the exported targets' axioms. The badge above links to the latest GitHub CI status.
 
-```sh
-git clone https://github.com/steph4n-gh/math-foundry.git
-cd math-foundry
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e .
-python scripts/replay_results.py --check-only --output runs/catalog-check.json
-```
+Certification checks the exact statement, declared premises and proof against
+genuine pinned dependencies. Permitted transitive axioms are `propext`,
+`Classical.choice` and `Quot.sound`; `sorryAx` and additional axioms fail the checks.
+It does not establish originality or certify an accompanying numerical experiment
+or explanation. The frozen assessments are **27 known results, 54 routine
+consequences and 260 awaiting review**, with expert review pending.
 
-`--check-only` checks the published catalogue and artifact bindings. It does not invoke Lean or establish a fresh kernel replay. These commands make no AI requests and need no Codex account.
+To reproduce the checks, follow the
+[exact-source replay guide](docs/using-proofs.md#replay-the-exact-retained-bytes).
+For the limits of the research claims, see
+[investigated routine comparisons](results/originality-notes.md),
+[negative results](docs/negative-results.md) and [publication scope](docs/publication.md).
+No general discovery-rate advantage or completed 24-hour release qualification
+has been established.
 
-For kernel replay, install [Elan](https://github.com/leanprover/elan#installation), then prepare the pinned workspace:
+## The research engine
 
-```sh
-"$HOME/.elan/bin/elan" toolchain install leanprover/lean4:v4.34.1
-cd certified_lean
-"$HOME/.elan/bin/lake" exe cache get
-cd ..
-python scripts/replay_results.py --id archetype_chi_ge_omega \
-  --timeout 60 --output runs/clique-replay.json
-```
+The repository also contains the experimental system used to propose graph/coding
+inequalities, search for counterexamples and attempt Lean proofs. Its seven
+campaigns, deterministic examples and optional model-assisted setup are in the
+[engine guide](docs/running-engine.md). Finite survivors remain candidates; each
+universal claim needs its own checked proof. There is no automatic synchronization
+between this public snapshot and private research.
 
-Dependency setup downloads upstream packages and build caches; replay uses the local compiler. Repeat `--id` to select named theorems, use `--limit 3` for a small sample, or omit both for the full corpus. `--shard-index 0 --shard-count 4` selects one of four disjoint shards; `--output` saves a report. Use a fresh report path when repeating a command; existing reports are never overwritten. A timeout is an unresolved replay, not a disproof.
+## Contribute or reuse
 
-Browse [results/catalog.json](results/catalog.json) for each exact structured statement and its source/challenge bindings, and the [investigated originality notes](results/originality-notes.md) for three routine comparisons. The frozen assessments comprise 27 known results, 54 routine consequences and 260 awaiting review; automated labels are preserved as provisional metadata. Sources contain their required checked parents. Companion challenges describe exact targets; compile the proof sources through the replay script rather than treating challenge placeholders as proofs.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for reproducible changes and mathematical
+review expectations. Original project code, documentation and newly authored
+proof scripts use [Apache-2.0](LICENSE). Upstream components and literature retain
+their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md).
 
-## Explore locally
-
-For a quick, deterministic example with expected output:
-
-```sh
-python -B -m examples.adjacency_code_demo
-```
-
-It constructs a four-cycle, computes its exact binary adjacency code and tests erasure recovery. The [worked guide](docs/adjacency-code-example.md) connects those finite computations to the checked universal distance and recovery statements.
-
-A small deterministic run needs no AI account:
-
-```sh
-python -B run_research.py --continuous --max-iterations 1 \
-  --proof-backend none --model-candidates 0 --max-lean-targets 0 \
-  --limit-per-pair 2 --limit-per-triad 2 --timeout-sec 60 \
-  --output-dir runs/offline-demo
-python -B dashboard.py --output-dir runs/offline-demo --port 8050
-```
-
-Open <http://127.0.0.1:8050/>. Use a fresh output directory for an independent run and the same directory to resume it. Only complete batches become committed checkpoints. The frozen public corpus is separate from a new run's initial library.
-
-## Optional model-assisted research
-
-Install and authenticate the [Codex CLI](https://developers.openai.com/codex/cli/) using your own account before selecting `--proof-backend codex`. Model generation and the background originality reviewer consume that account's allowance. Replay and deterministic exploration do not require them.
-
-For a bounded first experiment:
-
-```sh
-python -B run_research.py --continuous --campaign spectral \
-  --max-iterations 1 --timeout-sec 300 --workers 1 \
-  --proof-backend codex --model-candidates 1 --max-lean-targets 1 \
-  --model-rounds 1 --model-request-timeout 120 \
-  --output-dir runs/model-demo
-```
-
-Model and effort follow your CLI configuration unless explicitly supplied. The request and run deadlines are time ceilings, not token or billing caps. Proof, proposal and review requests have separate accounting. Keep failures and missing usage visible when comparing experiments.
-
-## Mathematical scope
-
-| Campaign | Investigated quantities |
-| --- | --- |
-| `spectral` | Adjacency and Laplacian spectra, algebraic connectivity, coloring and independence bounds |
-| `advanced_spectral` | Signless and normalized Laplacian quantities, energy, Estrada index and nonlinear envelopes |
-| `extremal_coloring` | Chromatic number, degrees, cliques and supported graph premises |
-| `independence_clique` | Independence, clique number, order and edge count |
-| `metric_topological` | Diameter, radius, girth, triangles and density |
-| `chemical_energy` | Adjacency energy, Estrada index and spectral spread |
-| `expander_codes` | The binary adjacency kernel over GF(2), dimension, distance and unique neighbors |
-
-These are seven graph/coding campaigns. Empirical breadth exceeds the trusted formal grammar: diameter, radius and girth currently have no accepted scalar Lean translation. Binary-code numerical checks are exact only through order 16. Unsupported cases remain unresolved.
-
-A finite survivor is a candidate. Certification requires the exact rendered target, genuine pinned dependencies and permitted transitive axioms (`propext`, `Classical.choice`, `Quot.sound`). It does not certify numerical screening, generated exposition, external paper interpretations or originality. Read the [originality workflow](docs/originality-frontier.md), [spectral comparison rules](docs/spectral-refinements.md), [negative results](docs/negative-results.md) and [publication scope](docs/publication.md).
-
-## Reuse and contributions
-
-Original project code, documentation and newly authored proof scripts are licensed under [Apache-2.0](LICENSE). Upstream components and literature retain their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md). Full papers, private traces, runtime state, DIMACS data bytes, dependency trees and toolchains are excluded. This is a frozen publication snapshot, with no automatic synchronization to private research.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for reproducible changes and mathematical-review expectations.
+Full papers, private traces, runtime state, DIMACS data bytes, dependency trees
+and toolchains are excluded from this publication.
