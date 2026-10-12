@@ -112,7 +112,7 @@ lake build
 
 The [library manifest](../certified_lean/MathFoundry/manifest.json) maps every original ID to its module, qualified theorem, original source/challenge hashes and generated-module hash. It is a packaging record; it does not grant originality or replace fresh kernel verification. Complete statements and guards remain in the [result catalog](../results/catalog.json).
 
-[ImportFoundry.lean](../examples/ImportFoundry.lean) is a separate consumer example used by CI. CI clones the checked commit as an actual Lake dependency, builds the complete library, compiles this consumer and audits all 341 target axioms, all eight exported names and the consumer theorem. This adds no new research result to the snapshot count.
+[ImportFoundry.lean](../examples/ImportFoundry.lean) is a separate consumer example used by CI. CI clones the checked commit as an actual Lake dependency, builds the complete library, compiles this consumer and audits all 341 target axioms, all eight exported names and all seven consumer theorems. The [practical examples](lean-examples.md) explain how to rule out a coloring, combine matching bounds into an exact chromatic number, and turn the adjacency-code dimension bound into a natural-number budget. Each includes a concrete application checked by CI. These examples add no new research result to the snapshot count.
 
 ## Maintain the packaging
 

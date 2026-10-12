@@ -2,24 +2,49 @@
 
 [![Verify engine and proof snapshot](https://github.com/steph4n-gh/math-foundry/actions/workflows/verify.yml/badge.svg)](https://github.com/steph4n-gh/math-foundry/actions/workflows/verify.yml)
 
-Math Foundry proposes graph inequalities, searches for counterexamples, and attempts proofs against genuine pinned Lean and Mathlib. It stores exact statements, guards, proof sources and verification evidence so others can inspect, replay and build on the work.
+Math Foundry is an **importable Lean library of graph and binary-code proofs**, alongside an experimental engine that proposes inequalities, searches for counterexamples and attempts formal proofs. Exact statements, guards, proof sources and verification evidence are retained so you can inspect, replay and build on the work.
 
-This public snapshot contains **341 Lean-certified proof artifacts from checkpoint 275**, frozen on 11 October 2026. All had passing saved independent replays at that boundary and passed [fresh independent Linux replays on GitHub](https://github.com/steph4n-gh/math-foundry/actions/runs/38175444941). The count includes known results, helpers, specializations and routine consequences; **no mathematical originality is established**. The project remains a research prototype, with no established general discovery-rate advantage or completed 24-hour release qualification.
+**Reusing the Lean library requires no AI account and no Python installation.** Start with the [proof index](results/README.md), the [reuse guide](docs/using-proofs.md) or the [practical Lean examples](docs/lean-examples.md).
+
+This public snapshot contains **341 Lean-certified proof artifacts from checkpoint 275**, frozen on **2026-10-11**. All had passing saved independent replays at that boundary. The [successful Linux verification](https://github.com/steph4n-gh/math-foundry/actions/runs/38182698567) also built the importable library, checked a separate consumer project and audited the exported targets' axioms. The count includes known results, helpers, specializations and routine consequences; **no mathematical originality is established**. The engine remains a research prototype, with no established general discovery-rate advantage or completed 24-hour release qualification.
 
 ## Choose a starting point
 
 | What you want to do | Start here | AI required? |
 | --- | --- | --- |
-| Read or reuse a checked theorem | [Proof index](results/README.md) and [using one proof](docs/using-proofs.md) | No |
+| Import and build on checked theorems | [Lean reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) and [practical examples](docs/lean-examples.md) | No |
+| Inspect or replay a specific result | [Proof index](results/README.md) and [replay guide](docs/using-proofs.md#replay-the-exact-retained-bytes) | No |
 | Try a small graph/coding experiment | [Worked adjacency-code example](docs/adjacency-code-example.md) | No |
 | Explore conjectures and counterexamples | [Local exploration](#explore-locally) | No |
 | Add optional model generation and proof attempts | [Model-assisted research](#optional-model-assisted-research) | Your own account |
 
-The [Lean library](certified_lean/MathFoundry.lean) exposes all 341 archived targets in separate namespaces. Use `import MathFoundry` for the complete collection or `import MathFoundry.Foundations` for eight useful starting results. The [reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) shows how to add it to your own Lake project; Python and a model account are unnecessary for library use.
+## Use the Lean library
+
+Install [Elan](https://github.com/leanprover/elan#installation) and use Lean **4.34.1**. Add the package to your Lake project:
+
+```lean
+require certifiedResearch from git
+  "https://github.com/steph4n-gh/math-foundry.git" @ "main" / "certified_lean"
+```
+
+Then import the eight foundation results and use a checked theorem directly:
+
+```lean
+import MathFoundry.Foundations
+
+theorem clique_bound {V : Type*} [Fintype V] [DecidableEq V]
+    (G : SimpleGraph V) [DecidableRel G.Adj] :
+    (G.cliqueNum : ℝ) ≤ (G.chromaticNumber.toNat : ℝ) := by
+  exact MathFoundry.archetype_chi_ge_omega G
+```
+
+The [reuse guide](docs/using-proofs.md#reuse-in-your-own-lean-project) provides complete project files, setup commands and axiom checks. The [practical examples](docs/lean-examples.md) show how to build further results from the library. Dependency setup downloads Lean and Mathlib sources or caches; it makes no model requests. After resolving the dependency, commit your Lake lockfile and pin the resolved Math Foundry commit instead of `"main"` for reproducibility.
+
+Use `import MathFoundry` for all 341 targets, or import an individual `MathFoundry.Archive.<theorem_name>` module. The [library manifest](certified_lean/MathFoundry/manifest.json) maps catalog IDs to modules and qualified theorem names; exact premises remain in [results/catalog.json](results/catalog.json). Lean is pinned to **4.34.1** and Mathlib to **d13f23b723b8a846827a245b89c10fc7d3f11612**.
 
 ## Start without AI
 
-Use Python 3.11 or newer on macOS or Linux. Work from the checkout root; the Lean workspace is separate from the Python package.
+For artifact inspection, standalone replay and local experiments, use Python **3.11 or newer** on macOS or Linux. Work from the checkout root; the Lean workspace is separate from the Python package.
 
 ```sh
 git clone https://github.com/steph4n-gh/math-foundry.git
@@ -43,7 +68,7 @@ python scripts/replay_results.py --id archetype_chi_ge_omega \
   --timeout 60 --output runs/clique-replay.json
 ```
 
-Lean is pinned to **4.34.1** and Mathlib to **d13f23b723b8a846827a245b89c10fc7d3f11612**. Dependency setup downloads upstream packages and build caches; replay uses the local compiler. Repeat `--id` to select named theorems, use `--limit 3` for a small sample, or omit both for the full corpus. `--shard-index 0 --shard-count 4` selects one of four disjoint shards; `--output` saves a report. Use a fresh report path when repeating a command; existing reports are never overwritten. A timeout is an unresolved replay, not a disproof.
+Dependency setup downloads upstream packages and build caches; replay uses the local compiler. Repeat `--id` to select named theorems, use `--limit 3` for a small sample, or omit both for the full corpus. `--shard-index 0 --shard-count 4` selects one of four disjoint shards; `--output` saves a report. Use a fresh report path when repeating a command; existing reports are never overwritten. A timeout is an unresolved replay, not a disproof.
 
 Browse [results/catalog.json](results/catalog.json) for each exact structured statement and its source/challenge bindings, and the [investigated originality notes](results/originality-notes.md) for three routine comparisons. The frozen assessments comprise 27 known results, 54 routine consequences and 260 awaiting review; automated labels are preserved as provisional metadata. Sources contain their required checked parents. Companion challenges describe exact targets; compile the proof sources through the replay script rather than treating challenge placeholders as proofs.
 

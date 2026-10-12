@@ -37,7 +37,15 @@ FOUNDATION_IDS = {
     "chung_normalized_laplacian_gap_upper", "parity_code_unique_neighbor_distance",
     "parity_code_dimension_le_order",
 }
-CONSUMER_TARGET = "FoundryConsumer.clique_bound"
+CONSUMER_TARGETS = (
+    "FoundryConsumer.clique_bound",
+    "FoundryConsumer.coloring_obstruction",
+    "FoundryConsumer.chromatic_number_from_matching_bounds",
+    "FoundryConsumer.adjacency_code_dimension_budget",
+    "FoundryConsumer.no_three_coloring",
+    "FoundryConsumer.four_colors_from_matching_bounds",
+    "FoundryConsumer.sixteen_vertex_dimension_budget",
+)
 CLEANUP_TIMEOUT = 120
 
 
@@ -300,6 +308,7 @@ def main(argv=None):
         parser.error("--output already exists; choose a fresh report")
     report = {"schema_version": 1, "status": "failed", "model_requests": 0,
         "mode": "foundations_only" if args.foundations_only else "complete_library",
+        "consumer_targets": list(CONSUMER_TARGETS),
         "started_at": time.time(), "commands": [], "axiom_checks": [],
         "budgets_sec": {key: getattr(args, key) for key in ("setup_timeout", "build_timeout", "audit_timeout", "timeout")},
         "scope": "Independent Git/Lake import, adapted library builds and transitive permitted-axiom checks; no originality or qualification."}
@@ -410,7 +419,7 @@ def main(argv=None):
             # #print reports their canonical archive names, bound by the manifest.
             queries += [{"name": r["qualified_theorem"], "canonical_name": r["archive_theorem"]}
                         for r in manifest["foundation_exports"]]
-            queries.append({"name": CONSUMER_TARGET, "canonical_name": CONSUMER_TARGET})
+            queries += [{"name": target, "canonical_name": target} for target in CONSUMER_TARGETS]
             audit = "import Consumer\n" + "".join("#print axioms " + query["name"] + "\n" for query in queries)
             (consumer / "Audit.lean").write_text(audit)
             report["audit_source_sha256"] = digest(audit.encode())

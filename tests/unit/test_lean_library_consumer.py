@@ -141,7 +141,7 @@ def test_cli_rejects_unbounded_caps_or_moving_revision(library, option, value):
     with pytest.raises(SystemExit): checker.main([option, value])
 
 
-def fake_pipeline(library, monkeypatch, failure=None):
+def fake_pipeline(library, monkeypatch, failure=None, consumer_target=None):
     root, manifest, _ = library
     binary = root / "fixture-lean"
     binary.write_bytes(b"mock compiler identity; no native calls")
@@ -190,6 +190,15 @@ def fake_pipeline(library, monkeypatch, failure=None):
             row["stdout"] = "".join("'" + canonical.get(name, name) + "' depends on axioms: [propext]\n" for name in queries)
             if failure == "axiom": row["stdout"] = row["stdout"].replace("[propext]", "[sorryAx]", 1)
             if failure == "cleanup": row.update(cleanup_error="mock reaping failure", state="failed")
+            if consumer_target is not None:
+                block = "'" + consumer_target + "' depends on axioms: [propext]\n"
+                assert row["stdout"].count(block) == 1
+                replacement = {
+                    "missing": "", "duplicate": block + block,
+                    "wrong_name": block.replace(consumer_target, "FoundryConsumer.unexpected"),
+                    "disallowed_axiom": block.replace("[propext]", "[sorryAx]"),
+                }[failure]
+                row["stdout"] = row["stdout"].replace(block, replacement)
         elif command[1:3] == ["-c", "import shutil,sys; shutil.rmtree(sys.argv[1])"]:
             shutil.rmtree(command[3])
         return row
@@ -217,12 +226,35 @@ def test_complete_vs_narrow_protocol_reports_different_scope(library, monkeypatc
     output = root / "report.json"
     assert checker.main(["--output", str(output), *(["--foundations-only"] if narrow else [])]) == 0
     report = json.loads(output.read_text())
-    assert report["native_axiom_queries_checked"] == (9 if narrow else 17)
-    assert report["distinct_native_constants_checked"] == 9
+    consumers = ["FoundryConsumer.clique_bound", "FoundryConsumer.coloring_obstruction",
+        "FoundryConsumer.chromatic_number_from_matching_bounds", "FoundryConsumer.adjacency_code_dimension_budget",
+        "FoundryConsumer.no_three_coloring", "FoundryConsumer.four_colors_from_matching_bounds",
+        "FoundryConsumer.sixteen_vertex_dimension_budget"]
+    assert report["consumer_targets"] == consumers
+    assert [r["queried_name"] for r in report["axiom_checks"][-7:]] == consumers
+    assert all(r["passed"] and not r["alias_resolved"] for r in report["axiom_checks"][-7:])
+    assert report["native_axiom_queries_checked"] == (15 if narrow else 23)
+    assert report["distinct_native_constants_checked"] == 15
     assert report["mode"] == ("foundations_only" if narrow else "complete_library")
     assert report["consumer_source_sha256"] != report["consumer_original_source_sha256"] if narrow else (
         report["consumer_source_sha256"] == report["consumer_original_source_sha256"])
     assert not any("update" in r["command"] for r in report["commands"])
+
+
+@pytest.mark.parametrize("target", ["FoundryConsumer.coloring_obstruction",
+    "FoundryConsumer.chromatic_number_from_matching_bounds", "FoundryConsumer.adjacency_code_dimension_budget",
+    "FoundryConsumer.no_three_coloring", "FoundryConsumer.four_colors_from_matching_bounds",
+    "FoundryConsumer.sixteen_vertex_dimension_budget"])
+@pytest.mark.parametrize("failure", ["missing", "duplicate", "wrong_name", "disallowed_axiom"])
+def test_every_practical_consumer_requires_its_own_exact_native_report(library, monkeypatch, target, failure):
+    root, _, _ = library
+    fake_pipeline(library, monkeypatch, failure, consumer_target=target)
+    output = root / "report.json"
+    assert checker.main(["--output", str(output)]) != 0
+    report = json.loads(output.read_text())
+    assert report["status"] == "failed" and report["model_requests"] == 0
+    assert report["consumer_targets"][-1] == "FoundryConsumer.sixteen_vertex_dimension_budget"
+    assert report["cleanup"] == "complete" and report["remaining_owned_process_groups"] == []
 
 
 def test_existing_report_is_never_overwritten(library):
