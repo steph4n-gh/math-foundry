@@ -14,7 +14,7 @@ Start with [using one proof](../docs/using-proofs.md) or the [small adjacency-co
 | [Spectral bounds](all-proofs.md#spectral-bounds) | 91 |
 | [Degree, density and triangles](all-proofs.md#degree-density-and-triangles) | 22 |
 
-The [full index](all-proofs.md) preserves every complete rendered statement. The [JSON catalog](catalog.json) additionally records structured expressions, guards, source/challenge hashes and historical verification.
+The [full index](all-proofs.md) links every artifact to its **plain-English explanation** and exact Lean target. [Browse the explanations](../docs/proofs/README.md) by subject to see what each result means and how its actual argument works. The index also shows the enforced numerical premises, distinguishes density from spectral radius, and groups spectral sums explicitly. The [JSON catalog](catalog.json) retains its original structured expressions, historical display strings, source/challenge hashes and verification evidence.
 
 ## Useful starting points
 

@@ -32,8 +32,9 @@ greedy bound; its historical source name does not claim the sharper Brooks theor
 
 ## Browse the whole collection
 
-Every entry in the full index includes its complete rendered statement and a
-link to the retained proof source. Conditional results keep their premises.
+Every entry in the full index now links to a **plain-English explanation** of
+its meaning and actual proof argument, alongside the statement, assessment and
+Lean source. Conditional results keep their premises.
 
 | Subject | Open the proofs | Artifacts |
 | --- | --- | --- |
@@ -43,7 +44,8 @@ link to the retained proof source. Conditional results keep their premises.
 | Adjacency codes and unique neighbors | [Browse](results/all-proofs.md#adjacency-codes-and-unique-neighbors) | 107 |
 | Degree, density and triangles | [Browse](results/all-proofs.md#degree-density-and-triangles) | 22 |
 
-**[All 341 statements and proofs →](results/all-proofs.md)** ·
+**[All 341 statements, explanations and proofs →](results/all-proofs.md)** ·
+[Browse all explanations](docs/proofs/README.md) ·
 [Eight foundation results explained](results/README.md#useful-starting-points) ·
 [Machine-readable catalog](results/catalog.json)
 
